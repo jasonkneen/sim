@@ -145,8 +145,8 @@ export const auth = betterAuth({
       config: [
         {
           providerId: 'github-repo',
-          clientId: process.env.GITHUB_CLIENT_ID as string,
-          clientSecret: process.env.GITHUB_CLIENT_SECRET as string,
+          clientId: process.env.GITHUB_REPO_CLIENT_ID as string,
+          clientSecret: process.env.GITHUB_REPO_CLIENT_SECRET as string,
           authorizationUrl: 'https://github.com/login/oauth/authorize',
           accessType: 'offline',
           prompt: 'consent',
@@ -157,8 +157,8 @@ export const auth = betterAuth({
         },
         {
           providerId: 'github-workflow',
-          clientId: process.env.GITHUB_CLIENT_ID as string,
-          clientSecret: process.env.GITHUB_CLIENT_SECRET as string,
+          clientId: process.env.GITHUB_WORKFLOW_CLIENT_ID as string,
+          clientSecret: process.env.GITHUB_WORKFLOW_CLIENT_SECRET as string,
           authorizationUrl: 'https://github.com/login/oauth/authorize',
           accessType: 'offline',
           tokenUrl: 'https://github.com/login/oauth/access_token',
