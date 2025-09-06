@@ -6,9 +6,9 @@
  * This file contains unit tests for the Function Execute tool,
  * which runs JavaScript code in a secure sandbox.
  */
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
-import { ToolTester } from '../__test-utils__/test-tools'
-import { functionExecuteTool } from './execute'
+import { afterEach, beforeEach, describe, expect, vi } from 'vitest'
+import { ToolTester } from '@/tools/__test-utils__/test-tools'
+import { functionExecuteTool } from '@/tools/function/execute'
 
 describe('Function Execute Tool', () => {
   let tester: ToolTester
@@ -25,12 +25,12 @@ describe('Function Execute Tool', () => {
   })
 
   describe('Request Construction', () => {
-    test('should set correct URL for code execution', () => {
+    it.concurrent('should set correct URL for code execution', () => {
       // Since this is an internal route, actual URL will be the concatenated base URL + path
       expect(tester.getRequestUrl({})).toBe('/api/function/execute')
     })
 
-    test('should include correct headers for JSON payload', () => {
+    it.concurrent('should include correct headers for JSON payload', () => {
       const headers = tester.getRequestHeaders({
         code: 'return 42',
       })
@@ -38,7 +38,7 @@ describe('Function Execute Tool', () => {
       expect(headers['Content-Type']).toBe('application/json')
     })
 
-    test('should format single string code correctly', () => {
+    it.concurrent('should format single string code correctly', () => {
       const body = tester.getRequestBody({
         code: 'return 42',
         envVars: {},
@@ -58,7 +58,7 @@ describe('Function Execute Tool', () => {
       })
     })
 
-    test('should format array of code blocks correctly', () => {
+    it.concurrent('should format array of code blocks correctly', () => {
       const body = tester.getRequestBody({
         code: [
           { content: 'const x = 40;', id: 'block1' },
@@ -82,7 +82,7 @@ describe('Function Execute Tool', () => {
       })
     })
 
-    test('should use default timeout and memory limit when not provided', () => {
+    it.concurrent('should use default timeout and memory limit when not provided', () => {
       const body = tester.getRequestBody({
         code: 'return 42',
       })
@@ -100,7 +100,7 @@ describe('Function Execute Tool', () => {
   })
 
   describe('Response Handling', () => {
-    test('should process successful code execution response', async () => {
+    it.concurrent('should process successful code execution response', async () => {
       // Setup a successful response
       tester.setup({
         success: true,
@@ -121,7 +121,7 @@ describe('Function Execute Tool', () => {
       expect(result.output.stdout).toBe('console.log output')
     })
 
-    test('should handle execution errors', async () => {
+    it.concurrent('should handle execution errors', async () => {
       // Setup error response
       tester.setup(
         {
@@ -142,7 +142,7 @@ describe('Function Execute Tool', () => {
       expect(result.error).toBe('Syntax error in code')
     })
 
-    test('should handle timeout errors', async () => {
+    it.concurrent('should handle timeout errors', async () => {
       // Setup timeout error response
       tester.setup(
         {
@@ -164,9 +164,9 @@ describe('Function Execute Tool', () => {
     })
   })
 
-  describe('Enhanced Error Handling', () => {
-    test('should handle enhanced syntax error with line content', async () => {
-      // Setup enhanced error response with debug information
+  describe('Error Handling', () => {
+    it.concurrent('should handle syntax error with line content', async () => {
+      // Setup error response with debug information
       tester.setup(
         {
           success: false,
@@ -193,7 +193,7 @@ describe('Function Execute Tool', () => {
         code: 'const obj = {\n  name: "test",\n  description: "This has a missing closing quote\n};\nreturn obj;',
       })
 
-      // Check enhanced error handling
+      // Check error handling
       expect(result.success).toBe(false)
       expect(result.error).toContain('Syntax Error')
       expect(result.error).toContain('Line 3')
@@ -202,8 +202,8 @@ describe('Function Execute Tool', () => {
       expect(result.error).toContain('(Check for missing quotes, brackets, or semicolons)')
     })
 
-    test('should handle enhanced runtime error with line and column', async () => {
-      // Setup enhanced runtime error response
+    it.concurrent('should handle runtime error with line and column', async () => {
+      // Setup runtime error response
       tester.setup(
         {
           success: false,
@@ -230,7 +230,7 @@ describe('Function Execute Tool', () => {
         code: 'const obj = null;\nreturn obj.someMethod();',
       })
 
-      // Check enhanced error handling
+      // Check error handling
       expect(result.success).toBe(false)
       expect(result.error).toContain('Type Error')
       expect(result.error).toContain('Line 2:16')
@@ -238,8 +238,8 @@ describe('Function Execute Tool', () => {
       expect(result.error).toContain('Cannot read properties of null')
     })
 
-    test('should handle enhanced error information in tool response', async () => {
-      // Setup enhanced error response with full debug info
+    it.concurrent('should handle error information in tool response', async () => {
+      // Setup error response with full debug info
       tester.setup(
         {
           success: false,
@@ -265,15 +265,15 @@ describe('Function Execute Tool', () => {
         code: 'return undefinedVar',
       })
 
-      // Check that the tool properly captures enhanced error
+      // Check that the tool properly captures error
       expect(result.success).toBe(false)
       expect(result.error).toBe(
         'Reference Error: Line 1: `return undefinedVar` - undefinedVar is not defined'
       )
     })
 
-    test('should preserve debug information in error object', async () => {
-      // Setup enhanced error response
+    it.concurrent('should preserve debug information in error object', async () => {
+      // Setup error response
       tester.setup(
         {
           success: false,
@@ -294,15 +294,14 @@ describe('Function Execute Tool', () => {
         code: 'valid line\ninvalid syntax here',
       })
 
-      // Check that enhanced error information is available
+      // Check that error information is available
       expect(result.success).toBe(false)
       expect(result.error).toBe('Syntax Error: Line 2 - Invalid syntax')
 
-      // Note: In this test framework, debug information would be available
-      // in the response object, but the tool transforms it into the error message
+      // Note: In this test framework, debug information would be available in the response object, but the tool transforms it into the error message
     })
 
-    test('should handle enhanced error without line information', async () => {
+    it.concurrent('should handle enhanced error without line information', async () => {
       // Setup error response without line information
       tester.setup(
         {
@@ -321,13 +320,13 @@ describe('Function Execute Tool', () => {
         code: 'return "test";',
       })
 
-      // Check error handling without enhanced line info
+      // Check error handling without line info
       expect(result.success).toBe(false)
       expect(result.error).toBe('Generic error message')
     })
 
-    test('should provide line-specific error message when available', async () => {
-      // Setup enhanced error response with line info
+    it.concurrent('should provide line-specific error message when available', async () => {
+      // Setup error response with line info
       tester.setup(
         {
           success: false,
@@ -348,7 +347,7 @@ describe('Function Execute Tool', () => {
         code: 'const obj = {};\nobj.nonExistentMethod();',
       })
 
-      // Check that enhanced error message is provided
+      // Check that error message is provided
       expect(result.success).toBe(false)
       expect(result.error).toContain('Line 5:20')
       expect(result.error).toContain('obj.nonExistentMethod()')
@@ -356,7 +355,7 @@ describe('Function Execute Tool', () => {
   })
 
   describe('Edge Cases', () => {
-    test('should handle empty code input', async () => {
+    it.concurrent('should handle empty code input', async () => {
       // Execute with empty code - this should still pass through to the API
       await tester.execute({
         code: '',
@@ -367,7 +366,7 @@ describe('Function Execute Tool', () => {
       expect(body.code).toBe('')
     })
 
-    test('should handle extremely short timeout', async () => {
+    it.concurrent('should handle extremely short timeout', async () => {
       // Edge case with very short timeout
       const body = tester.getRequestBody({
         code: 'return 42',

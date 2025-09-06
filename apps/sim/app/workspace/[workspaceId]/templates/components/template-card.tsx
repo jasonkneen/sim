@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import {
   Award,
   BarChart3,
@@ -40,8 +41,12 @@ import {
   Wrench,
   Zap,
 } from 'lucide-react'
+import { useParams, useRouter } from 'next/navigation'
+import { createLogger } from '@/lib/logs/console/logger'
 import { cn } from '@/lib/utils'
 import { getBlock } from '@/blocks/registry'
+
+const logger = createLogger('TemplateCard')
 
 // Icon mapping for template icons
 const iconMap = {
@@ -120,52 +125,68 @@ interface TemplateCardProps {
   state?: {
     blocks?: Record<string, { type: string; name?: string }>
   }
-  // Add handlers for star and use actions
-  onStar?: (templateId: string, isCurrentlyStarred: boolean) => Promise<void>
-  onUse?: (templateId: string) => Promise<void>
   isStarred?: boolean
+  // Optional callback when template is successfully used (for closing modals, etc.)
+  onTemplateUsed?: () => void
+  // Callback when star state changes (for parent state updates)
+  onStarChange?: (templateId: string, isStarred: boolean, newStarCount: number) => void
 }
 
 // Skeleton component for loading states
 export function TemplateCardSkeleton({ className }: { className?: string }) {
   return (
-    <div className={cn('rounded-[14px] border bg-card shadow-xs', 'flex h-38', className)}>
+    <div className={cn('rounded-[14px] border bg-card shadow-xs', 'flex h-[142px]', className)}>
       {/* Left side - Info skeleton */}
       <div className='flex min-w-0 flex-1 flex-col justify-between p-4'>
         {/* Top section skeleton */}
-        <div className='space-y-3'>
-          <div className='flex min-w-0 items-center gap-2.5'>
-            {/* Icon skeleton */}
-            <div className='h-5 w-5 flex-shrink-0 animate-pulse rounded bg-gray-200' />
-            {/* Title skeleton */}
-            <div className='h-4 w-24 animate-pulse rounded bg-gray-200' />
+        <div className='space-y-2'>
+          <div className='flex min-w-0 items-center justify-between gap-2.5'>
+            <div className='flex min-w-0 items-center gap-2.5'>
+              {/* Icon skeleton */}
+              <div className='h-5 w-5 flex-shrink-0 animate-pulse rounded-md bg-gray-200' />
+              {/* Title skeleton */}
+              <div className='h-4 w-32 animate-pulse rounded bg-gray-200' />
+            </div>
+
+            {/* Star and Use button skeleton */}
+            <div className='flex flex-shrink-0 items-center gap-3'>
+              <div className='h-4 w-4 animate-pulse rounded bg-gray-200' />
+              <div className='h-6 w-10 animate-pulse rounded-md bg-gray-200' />
+            </div>
           </div>
 
           {/* Description skeleton */}
-          <div className='space-y-2'>
+          <div className='space-y-1.5'>
             <div className='h-3 w-full animate-pulse rounded bg-gray-200' />
-            <div className='h-3 w-3/4 animate-pulse rounded bg-gray-200' />
-            <div className='h-3 w-1/2 animate-pulse rounded bg-gray-200' />
+            <div className='h-3 w-4/5 animate-pulse rounded bg-gray-200' />
+            <div className='h-3 w-3/5 animate-pulse rounded bg-gray-200' />
           </div>
         </div>
 
         {/* Bottom section skeleton */}
-        <div className='flex min-w-0 items-center gap-1.5'>
-          <div className='h-3 w-8 animate-pulse rounded bg-gray-200' />
+        <div className='flex min-w-0 items-center gap-1.5 pt-1.5'>
+          <div className='h-3 w-6 animate-pulse rounded bg-gray-200' />
           <div className='h-3 w-16 animate-pulse rounded bg-gray-200' />
-          <div className='h-3 w-1 animate-pulse rounded bg-gray-200' />
+          <div className='h-2 w-1 animate-pulse rounded bg-gray-200' />
           <div className='h-3 w-3 animate-pulse rounded bg-gray-200' />
           <div className='h-3 w-8 animate-pulse rounded bg-gray-200' />
+          {/* Stars section - hidden on smaller screens */}
+          <div className='hidden flex-shrink-0 items-center gap-1.5 sm:flex'>
+            <div className='h-2 w-1 animate-pulse rounded bg-gray-200' />
+            <div className='h-3 w-3 animate-pulse rounded bg-gray-200' />
+            <div className='h-3 w-6 animate-pulse rounded bg-gray-200' />
+          </div>
         </div>
       </div>
 
-      {/* Right side - Blocks skeleton */}
-      <div className='flex w-16 flex-col gap-1 rounded-r-[14px] border-border border-l bg-secondary p-2'>
-        {Array.from({ length: 4 }).map((_, index) => (
-          <div key={index} className='flex items-center gap-1.5'>
-            <div className='h-3 w-3 animate-pulse rounded bg-gray-200' />
-            <div className='h-3 w-12 animate-pulse rounded bg-gray-200' />
-          </div>
+      {/* Right side - Block Icons skeleton */}
+      <div className='flex w-16 flex-col items-center justify-center gap-2 rounded-r-[14px] border-border border-l bg-secondary p-2'>
+        {Array.from({ length: 3 }).map((_, index) => (
+          <div
+            key={index}
+            className='animate-pulse rounded bg-gray-200'
+            style={{ width: '30px', height: '30px' }}
+          />
         ))}
       </div>
     </div>
@@ -225,10 +246,18 @@ export function TemplateCard({
   onClick,
   className,
   state,
-  onStar,
-  onUse,
   isStarred = false,
+  onTemplateUsed,
+  onStarChange,
 }: TemplateCardProps) {
+  const router = useRouter()
+  const params = useParams()
+
+  // Local state for optimistic updates
+  const [localIsStarred, setLocalIsStarred] = useState(isStarred)
+  const [localStarCount, setLocalStarCount] = useState(stars)
+  const [isStarLoading, setIsStarLoading] = useState(false)
+
   // Extract block types from state if provided, otherwise use the blocks prop
   // Filter out starter blocks in both cases and sort for consistent rendering
   const blockTypes = state
@@ -238,19 +267,98 @@ export function TemplateCard({
   // Get the icon component
   const iconComponent = getIconComponent(icon)
 
-  // Handle star toggle
+  // Handle star toggle with optimistic updates
   const handleStarClick = async (e: React.MouseEvent) => {
     e.stopPropagation()
-    if (onStar) {
-      await onStar(id, isStarred)
+
+    // Prevent multiple clicks while loading
+    if (isStarLoading) return
+
+    setIsStarLoading(true)
+
+    // Optimistic update - update UI immediately
+    const newIsStarred = !localIsStarred
+    const newStarCount = newIsStarred ? localStarCount + 1 : localStarCount - 1
+
+    setLocalIsStarred(newIsStarred)
+    setLocalStarCount(newStarCount)
+
+    // Notify parent component immediately for optimistic update
+    if (onStarChange) {
+      onStarChange(id, newIsStarred, newStarCount)
+    }
+
+    try {
+      const method = localIsStarred ? 'DELETE' : 'POST'
+      const response = await fetch(`/api/templates/${id}/star`, { method })
+
+      if (!response.ok) {
+        // Rollback on error
+        setLocalIsStarred(localIsStarred)
+        setLocalStarCount(localStarCount)
+
+        // Rollback parent state too
+        if (onStarChange) {
+          onStarChange(id, localIsStarred, localStarCount)
+        }
+
+        logger.error('Failed to toggle star:', response.statusText)
+      }
+    } catch (error) {
+      // Rollback on error
+      setLocalIsStarred(localIsStarred)
+      setLocalStarCount(localStarCount)
+
+      // Rollback parent state too
+      if (onStarChange) {
+        onStarChange(id, localIsStarred, localStarCount)
+      }
+
+      logger.error('Error toggling star:', error)
+    } finally {
+      setIsStarLoading(false)
     }
   }
 
   // Handle use template
   const handleUseClick = async (e: React.MouseEvent) => {
     e.stopPropagation()
-    if (onUse) {
-      await onUse(id)
+    try {
+      const response = await fetch(`/api/templates/${id}/use`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          workspaceId: params.workspaceId,
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        logger.info('Template use API response:', data)
+
+        if (!data.workflowId) {
+          logger.error('No workflowId returned from API:', data)
+          return
+        }
+
+        const workflowUrl = `/workspace/${params.workspaceId}/w/${data.workflowId}`
+        logger.info('Template used successfully, navigating to:', workflowUrl)
+
+        // Call the callback if provided (for closing modals, etc.)
+        if (onTemplateUsed) {
+          onTemplateUsed()
+        }
+
+        // Use window.location.href for more reliable navigation
+        window.location.href = workflowUrl
+      } else {
+        const errorText = await response.text()
+        logger.error('Failed to use template:', response.statusText, errorText)
+      }
+    } catch (error) {
+      logger.error('Error using template:', error)
     }
   }
 
@@ -265,7 +373,7 @@ export function TemplateCard({
       {/* Left side - Info */}
       <div className='flex min-w-0 flex-1 flex-col justify-between p-4'>
         {/* Top section */}
-        <div className='space-y-3'>
+        <div className='space-y-2'>
           <div className='flex min-w-0 items-center justify-between gap-2.5'>
             <div className='flex min-w-0 items-center gap-2.5'>
               {/* Icon container */}
@@ -293,10 +401,11 @@ export function TemplateCard({
               <Star
                 onClick={handleStarClick}
                 className={cn(
-                  'h-4 w-4 cursor-pointer transition-colors',
-                  isStarred
+                  'h-4 w-4 cursor-pointer transition-all duration-200',
+                  localIsStarred
                     ? 'fill-yellow-400 text-yellow-400'
-                    : 'text-muted-foreground hover:fill-yellow-400 hover:text-yellow-400'
+                    : 'text-muted-foreground hover:fill-yellow-400 hover:text-yellow-400',
+                  isStarLoading && 'opacity-50'
                 )}
               />
               <button
@@ -319,7 +428,7 @@ export function TemplateCard({
         </div>
 
         {/* Bottom section */}
-        <div className='flex min-w-0 items-center gap-1.5 font-sans text-muted-foreground text-xs'>
+        <div className='flex min-w-0 items-center gap-1.5 pt-1.5 font-sans text-muted-foreground text-xs'>
           <span className='flex-shrink-0'>by</span>
           <span className='min-w-0 truncate'>{author}</span>
           <span className='flex-shrink-0'>•</span>
@@ -329,7 +438,7 @@ export function TemplateCard({
           <div className='hidden flex-shrink-0 items-center gap-1.5 sm:flex'>
             <span>•</span>
             <Star className='h-3 w-3' />
-            <span>{stars}</span>
+            <span>{localStarCount}</span>
           </div>
         </div>
       </div>

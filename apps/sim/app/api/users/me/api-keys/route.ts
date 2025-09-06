@@ -2,12 +2,14 @@ import { eq } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 import { type NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
-import { createLogger } from '@/lib/logs/console-logger'
+import { createLogger } from '@/lib/logs/console/logger'
 import { generateApiKey } from '@/lib/utils'
 import { db } from '@/db'
 import { apiKey } from '@/db/schema'
 
 const logger = createLogger('ApiKeysAPI')
+
+export const dynamic = 'force-dynamic'
 
 // GET /api/users/me/api-keys - Get all API keys for the current user
 export async function GET(request: NextRequest) {

@@ -1,8 +1,8 @@
 import { DocumentIcon } from '@/components/icons'
 import { isProd } from '@/lib/environment'
-import { createLogger } from '@/lib/logs/console-logger'
+import { createLogger } from '@/lib/logs/console/logger'
+import type { BlockConfig, SubBlockConfig, SubBlockLayout, SubBlockType } from '@/blocks/types'
 import type { FileParserOutput } from '@/tools/file/types'
-import type { BlockConfig, SubBlockConfig, SubBlockLayout, SubBlockType } from '../types'
 
 const logger = createLogger('FileBlock')
 
@@ -38,7 +38,7 @@ export const FileBlock: BlockConfig<FileParserOutput> = {
       ? 'You can either provide a URL to a file or upload files directly. '
       : 'Upload files directly. '
   }Specialized parsers extract text and metadata from each format. You can upload multiple files at once and access them individually or as a combined document.`,
-  docsLink: 'https://docs.simstudio.ai/tools/file',
+  docsLink: 'https://docs.sim.ai/tools/file',
   category: 'tools',
   bgColor: '#40916C',
   icon: DocumentIcon,
@@ -122,16 +122,16 @@ export const FileBlock: BlockConfig<FileParserOutput> = {
     // Conditionally require inputMethod and filePath only if URL input is enabled
     ...(shouldEnableURLInput
       ? {
-          inputMethod: { type: 'string', required: false }, // Not strictly required as it defaults
-          filePath: { type: 'string', required: false }, // Required only if inputMethod is 'url' (validated in params)
+          inputMethod: { type: 'string', description: 'Input method selection' }, // Not strictly required as it defaults
+          filePath: { type: 'string', description: 'File URL path' }, // Required only if inputMethod is 'url' (validated in params)
         }
       : {}),
-    fileType: { type: 'string', required: false },
+    fileType: { type: 'string', description: 'File type' },
     // File input is always potentially needed, but only required if method is 'upload' (validated in params)
-    file: { type: 'json', required: false },
+    file: { type: 'json', description: 'Uploaded file data' },
   },
   outputs: {
-    files: 'json',
-    combinedContent: 'string',
+    files: { type: 'json', description: 'Parsed file data' },
+    combinedContent: { type: 'string', description: 'Combined file content' },
   },
 }

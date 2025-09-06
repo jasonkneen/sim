@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm'
-import { createLogger } from '@/lib/logs/console-logger'
+import { createLogger } from '@/lib/logs/console/logger'
 import { db } from '@/db'
 import { workflowBlocks, workflowEdges, workflowSubflows } from '@/db/schema'
 import type { LoopConfig, WorkflowState } from '@/stores/workflows/workflow/types'
@@ -211,7 +211,6 @@ export async function saveWorkflowToNormalizedTables(
       isDeployed: state.isDeployed,
       deployedAt: state.deployedAt,
       deploymentStatuses: state.deploymentStatuses,
-      hasActiveSchedule: state.hasActiveSchedule,
       hasActiveWebhook: state.hasActiveWebhook,
     }
 
@@ -264,7 +263,6 @@ export async function migrateWorkflowToNormalizedTables(
       isDeployed: jsonState.isDeployed,
       deployedAt: jsonState.deployedAt,
       deploymentStatuses: jsonState.deploymentStatuses || {},
-      hasActiveSchedule: jsonState.hasActiveSchedule,
       hasActiveWebhook: jsonState.hasActiveWebhook,
     }
 

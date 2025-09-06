@@ -1,8 +1,8 @@
 import { StagehandIcon } from '@/components/icons'
+import type { BlockConfig } from '@/blocks/types'
 import type { ToolResponse } from '@/tools/types'
-import type { BlockConfig } from '../types'
 
-interface StagehandExtractResponse extends ToolResponse {
+export interface StagehandExtractResponse extends ToolResponse {
   output: {
     data: Record<string, any>
   }
@@ -14,7 +14,7 @@ export const StagehandBlock: BlockConfig<StagehandExtractResponse> = {
   description: 'Extract data from websites',
   longDescription:
     'Use Stagehand to extract structured data from webpages using Browserbase and OpenAI.',
-  docsLink: 'https://docs.simstudio.ai/tools/stagehand',
+  docsLink: 'https://docs.sim.ai/tools/stagehand',
   category: 'tools',
   bgColor: '#FFC83C',
   icon: StagehandIcon,
@@ -25,13 +25,15 @@ export const StagehandBlock: BlockConfig<StagehandExtractResponse> = {
       type: 'short-input',
       layout: 'full',
       placeholder: 'Enter the URL of the website to extract data from',
+      required: true,
     },
     {
       id: 'instruction',
-      title: 'Instruction',
+      title: 'Instructions',
       type: 'long-input',
       layout: 'full',
       placeholder: 'Enter detailed instructions for what data to extract from the page...',
+      required: true,
     },
     {
       id: 'apiKey',
@@ -40,6 +42,7 @@ export const StagehandBlock: BlockConfig<StagehandExtractResponse> = {
       layout: 'full',
       placeholder: 'Enter your OpenAI API key',
       password: true,
+      required: true,
     },
     {
       id: 'schema',
@@ -49,6 +52,7 @@ export const StagehandBlock: BlockConfig<StagehandExtractResponse> = {
       placeholder: 'Enter JSON Schema...',
       language: 'json',
       generationType: 'json-schema',
+      required: true,
     },
   ],
   tools: {
@@ -58,12 +62,12 @@ export const StagehandBlock: BlockConfig<StagehandExtractResponse> = {
     },
   },
   inputs: {
-    url: { type: 'string', required: true },
-    instruction: { type: 'string', required: true },
-    schema: { type: 'json', required: true },
-    apiKey: { type: 'string', required: true },
+    url: { type: 'string', description: 'Website URL to extract' },
+    instruction: { type: 'string', description: 'Extraction instructions' },
+    schema: { type: 'json', description: 'JSON schema definition' },
+    apiKey: { type: 'string', description: 'OpenAI API key' },
   },
   outputs: {
-    data: 'json',
+    data: { type: 'json', description: 'Extracted data' },
   },
 }

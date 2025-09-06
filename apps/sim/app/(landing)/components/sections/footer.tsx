@@ -6,8 +6,8 @@ import { useRouter } from 'next/navigation'
 import { DiscordIcon, GithubIcon, xIcon as XIcon } from '@/components/icons'
 import { Button } from '@/components/ui/button'
 import { useSession } from '@/lib/auth-client'
-import { usePrefetchOnHover } from '../../utils/prefetch'
-import useIsMobile from '../hooks/use-is-mobile'
+import useIsMobile from '@/app/(landing)/components/hooks/use-is-mobile'
+import { usePrefetchOnHover } from '@/app/(landing)/utils/prefetch'
 
 function Footer() {
   const router = useRouter()
@@ -90,7 +90,7 @@ function Footer() {
               <div className='flex w-full flex-row justify-between gap-4 md:w-auto md:justify-start md:gap-16'>
                 <div className='flex flex-col gap-2'>
                   <Link
-                    href={'https://docs.simstudio.ai/'}
+                    href={'https://docs.sim.ai/'}
                     target='_blank'
                     rel='noopener noreferrer'
                     className='font-light text-[#9E91AA] text-xl transition-all duration-500 hover:text-[#bdaecb] md:text-2xl'
@@ -159,7 +159,7 @@ function Footer() {
                     <DiscordIcon className='h-9 w-9 fill-[#9E91AA] hover:fill-[#bdaecb] md:h-10 md:w-10' />
                   </Link>
                   <Link
-                    href={'https://x.com/simstudioai'}
+                    href={'https://x.com/simdotai'}
                     target='_blank'
                     rel='noopener noreferrer'
                     className='text-2xl transition-all duration-500'
@@ -268,7 +268,7 @@ function Footer() {
                 transition={{ duration: 0.7, delay: 0.32, ease: 'easeOut' }}
               >
                 <Link
-                  href={'https://docs.simstudio.ai/'}
+                  href={'https://docs.sim.ai/'}
                   target='_blank'
                   rel='noopener noreferrer'
                   className='font-light text-[#9E91AA] text-xl transition-all duration-500 hover:text-[#bdaecb] md:text-2xl'
@@ -349,7 +349,7 @@ function Footer() {
                   <DiscordIcon className='h-9 w-9 fill-[#9E91AA] hover:fill-[#bdaecb] md:h-10 md:w-10' />
                 </Link>
                 <Link
-                  href={'https://x.com/simstudioai'}
+                  href={'https://x.com/simdotai'}
                   target='_blank'
                   rel='noopener noreferrer'
                   className='text-2xl transition-all duration-500'

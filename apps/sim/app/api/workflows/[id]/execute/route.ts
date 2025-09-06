@@ -1,11 +1,13 @@
+import { tasks } from '@trigger.dev/sdk/v3'
 import { eq, sql } from 'drizzle-orm'
 import { type NextRequest, NextResponse } from 'next/server'
 import { v4 as uuidv4 } from 'uuid'
 import { z } from 'zod'
+import { getSession } from '@/lib/auth'
 import { checkServerSideUsageLimits } from '@/lib/billing'
-import { createLogger } from '@/lib/logs/console-logger'
-import { EnhancedLoggingSession } from '@/lib/logs/enhanced-logging-session'
-import { buildTraceSpans } from '@/lib/logs/trace-spans'
+import { createLogger } from '@/lib/logs/console/logger'
+import { LoggingSession } from '@/lib/logs/execution/logging-session'
+import { buildTraceSpans } from '@/lib/logs/execution/trace-spans/trace-spans'
 import { decryptSecret } from '@/lib/utils'
 import { loadWorkflowFromNormalizedTables } from '@/lib/workflows/db-helpers'
 import {
@@ -13,13 +15,19 @@ import {
   updateWorkflowRunCounts,
   workflowHasResponseBlock,
 } from '@/lib/workflows/utils'
+import { validateWorkflowAccess } from '@/app/api/workflows/middleware'
+import { createErrorResponse, createSuccessResponse } from '@/app/api/workflows/utils'
 import { db } from '@/db'
-import { environment as environmentTable, userStats } from '@/db/schema'
+import { environment as environmentTable, subscription, userStats } from '@/db/schema'
 import { Executor } from '@/executor'
 import { Serializer } from '@/serializer'
+import {
+  RateLimitError,
+  RateLimiter,
+  type SubscriptionPlan,
+  type TriggerType,
+} from '@/services/queue'
 import { mergeSubblockState } from '@/stores/workflows/server-utils'
-import { validateWorkflowAccess } from '../../middleware'
-import { createErrorResponse, createSuccessResponse } from '../../utils'
 
 const logger = createLogger('WorkflowExecuteAPI')
 
@@ -33,18 +41,30 @@ const EnvVarsSchema = z.record(z.string())
 // Use a combination of workflow ID and request ID to allow concurrent executions with different inputs
 const runningExecutions = new Set<string>()
 
-// Custom error class for usage limit exceeded
-class UsageLimitError extends Error {
-  statusCode: number
-
-  constructor(message: string) {
-    super(message)
-    this.name = 'UsageLimitError'
-    this.statusCode = 402 // Payment Required status code
+// Utility function to filter out logs and workflowConnections from API response
+function createFilteredResult(result: any) {
+  return {
+    ...result,
+    logs: undefined,
+    metadata: result.metadata
+      ? {
+          ...result.metadata,
+          workflowConnections: undefined,
+        }
+      : undefined,
   }
 }
 
-async function executeWorkflow(workflow: any, requestId: string, input?: any) {
+// Custom error class for usage limit exceeded
+class UsageLimitError extends Error {
+  statusCode: number
+  constructor(message: string, statusCode = 402) {
+    super(message)
+    this.statusCode = statusCode
+  }
+}
+
+async function executeWorkflow(workflow: any, requestId: string, input?: any): Promise<any> {
   const workflowId = workflow.id
   const executionId = uuidv4()
 
@@ -58,7 +78,9 @@ async function executeWorkflow(workflow: any, requestId: string, input?: any) {
     throw new Error('Execution is already running')
   }
 
-  const loggingSession = new EnhancedLoggingSession(workflowId, executionId, 'api', requestId)
+  const loggingSession = new LoggingSession(workflowId, executionId, 'api', requestId)
+
+  // Rate limiting is now handled before entering the sync queue
 
   // Check if the user has exceeded their usage limits
   const usageCheck = await checkServerSideUsageLimits(workflow.userId)
@@ -242,24 +264,13 @@ async function executeWorkflow(workflow: any, requestId: string, input?: any) {
       {} as Record<string, Record<string, any>>
     )
 
-    // Get workflow variables
-    let workflowVariables = {}
-    if (workflow.variables) {
-      try {
-        // Parse workflow variables if they're stored as a string
-        if (typeof workflow.variables === 'string') {
-          workflowVariables = JSON.parse(workflow.variables)
-        } else {
-          // Otherwise use as is (already parsed JSON)
-          workflowVariables = workflow.variables
-        }
-        logger.debug(
-          `[${requestId}] Loaded ${Object.keys(workflowVariables).length} workflow variables for: ${workflowId}`
-        )
-      } catch (error) {
-        logger.error(`[${requestId}] Failed to parse workflow variables: ${workflowId}`, error)
-        // Continue execution even if variables can't be parsed
-      }
+    // Get workflow variables - they are stored as JSON objects in the database
+    const workflowVariables = (workflow.variables as Record<string, any>) || {}
+
+    if (Object.keys(workflowVariables).length > 0) {
+      logger.debug(
+        `[${requestId}] Loaded ${Object.keys(workflowVariables).length} workflow variables for: ${workflowId}`
+      )
     } else {
       logger.debug(`[${requestId}] No workflow variables found for: ${workflowId}`)
     }
@@ -270,7 +281,8 @@ async function executeWorkflow(workflow: any, requestId: string, input?: any) {
       mergedStates,
       edges,
       loops,
-      parallels
+      parallels,
+      true // Enable validation during execution
     )
 
     const executor = new Executor(
@@ -281,7 +293,7 @@ async function executeWorkflow(workflow: any, requestId: string, input?: any) {
       workflowVariables
     )
 
-    // Set up enhanced logging on the executor
+    // Set up logging on the executor
     loggingSession.setupExecutor(executor)
 
     const result = await executor.execute(workflowId)
@@ -307,7 +319,7 @@ async function executeWorkflow(workflow: any, requestId: string, input?: any) {
         .update(userStats)
         .set({
           totalApiCalls: sql`total_api_calls + 1`,
-          lastActive: new Date(),
+          lastActive: sql`now()`,
         })
         .where(eq(userStats.userId, workflow.userId))
     }
@@ -350,17 +362,75 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return createErrorResponse(validation.error.message, validation.error.status)
     }
 
-    const result = await executeWorkflow(validation.workflow, requestId)
-
-    // Check if the workflow execution contains a response block output
-    const hasResponseBlock = workflowHasResponseBlock(result)
-    if (hasResponseBlock) {
-      return createHttpResponseFromBlock(result)
+    // Determine trigger type based on authentication
+    let triggerType: TriggerType = 'manual'
+    const session = await getSession()
+    if (!session?.user?.id) {
+      // Check for API key
+      const apiKeyHeader = request.headers.get('X-API-Key')
+      if (apiKeyHeader) {
+        triggerType = 'api'
+      }
     }
 
-    return createSuccessResponse(result)
+    // Note: Async execution is now handled in the POST handler below
+
+    // Synchronous execution
+    try {
+      // Check rate limits BEFORE entering queue for GET requests
+      if (triggerType === 'api') {
+        // Get user subscription
+        const [subscriptionRecord] = await db
+          .select({ plan: subscription.plan })
+          .from(subscription)
+          .where(eq(subscription.referenceId, validation.workflow.userId))
+          .limit(1)
+
+        const subscriptionPlan = (subscriptionRecord?.plan || 'free') as SubscriptionPlan
+
+        const rateLimiter = new RateLimiter()
+        const rateLimitCheck = await rateLimiter.checkRateLimit(
+          validation.workflow.userId,
+          subscriptionPlan,
+          triggerType,
+          false // isAsync = false for sync calls
+        )
+
+        if (!rateLimitCheck.allowed) {
+          throw new RateLimitError(
+            `Rate limit exceeded. You have ${rateLimitCheck.remaining} requests remaining. Resets at ${rateLimitCheck.resetAt.toISOString()}`
+          )
+        }
+      }
+
+      const result = await executeWorkflow(validation.workflow, requestId, undefined)
+
+      // Check if the workflow execution contains a response block output
+      const hasResponseBlock = workflowHasResponseBlock(result)
+      if (hasResponseBlock) {
+        return createHttpResponseFromBlock(result)
+      }
+
+      // Filter out logs and workflowConnections from the API response
+      const filteredResult = createFilteredResult(result)
+      return createSuccessResponse(filteredResult)
+    } catch (error: any) {
+      if (error.message?.includes('Service overloaded')) {
+        return createErrorResponse(
+          'Service temporarily overloaded. Please try again later.',
+          503,
+          'SERVICE_OVERLOADED'
+        )
+      }
+      throw error
+    }
   } catch (error: any) {
     logger.error(`[${requestId}] Error executing workflow: ${id}`, error)
+
+    // Check if this is a rate limit error
+    if (error instanceof RateLimitError) {
+      return createErrorResponse(error.message, error.statusCode, 'RATE_LIMIT_EXCEEDED')
+    }
 
     // Check if this is a usage limit error
     if (error instanceof UsageLimitError) {
@@ -375,56 +445,189 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   }
 }
 
-export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+): Promise<Response> {
   const requestId = crypto.randomUUID().slice(0, 8)
+  const logger = createLogger('WorkflowExecuteAPI')
+  logger.info(`[${requestId}] Raw request body: `)
+
   const { id } = await params
+  const workflowId = id
 
   try {
-    logger.debug(`[${requestId}] POST execution request for workflow: ${id}`)
-    const validation = await validateWorkflowAccess(request, id)
+    // Validate workflow access
+    const validation = await validateWorkflowAccess(request as NextRequest, id)
     if (validation.error) {
       logger.warn(`[${requestId}] Workflow access validation failed: ${validation.error.message}`)
       return createErrorResponse(validation.error.message, validation.error.status)
     }
 
-    const bodyText = await request.text()
-    logger.info(`[${requestId}] Raw request body:`, bodyText)
+    // Check execution mode from header
+    const executionMode = request.headers.get('X-Execution-Mode')
+    const isAsync = executionMode === 'async'
 
-    let body = {}
-    if (bodyText?.trim()) {
+    // Parse request body
+    const body = await request.text()
+    logger.info(`[${requestId}] ${body ? 'Request body provided' : 'No request body provided'}`)
+
+    let input = {}
+    if (body) {
       try {
-        body = JSON.parse(bodyText)
-        logger.info(`[${requestId}] Parsed request body:`, JSON.stringify(body, null, 2))
+        input = JSON.parse(body)
       } catch (error) {
-        logger.error(`[${requestId}] Failed to parse request body:`, error)
-        return createErrorResponse('Invalid JSON in request body', 400, 'INVALID_JSON')
+        logger.error(`[${requestId}] Failed to parse request body as JSON`, error)
+        return createErrorResponse('Invalid JSON in request body', 400)
       }
+    }
+
+    logger.info(`[${requestId}] Input passed to workflow:`, input)
+
+    // Get authenticated user and determine trigger type
+    let authenticatedUserId: string | null = null
+    let triggerType: TriggerType = 'manual'
+
+    const session = await getSession()
+    if (session?.user?.id) {
+      authenticatedUserId = session.user.id
+      triggerType = 'manual' // UI session (not rate limited)
     } else {
-      logger.info(`[${requestId}] No request body provided`)
+      const apiKeyHeader = request.headers.get('X-API-Key')
+      if (apiKeyHeader) {
+        authenticatedUserId = validation.workflow.userId
+        triggerType = 'api'
+      }
     }
 
-    // Pass the raw body directly as input for API workflows
-    const hasContent = Object.keys(body).length > 0
-    const input = hasContent ? body : {}
-
-    logger.info(`[${requestId}] Input passed to workflow:`, JSON.stringify(input, null, 2))
-
-    // Execute workflow with the raw input
-    const result = await executeWorkflow(validation.workflow, requestId, input)
-
-    // Check if the workflow execution contains a response block output
-    const hasResponseBlock = workflowHasResponseBlock(result)
-    if (hasResponseBlock) {
-      return createHttpResponseFromBlock(result)
+    if (!authenticatedUserId) {
+      return createErrorResponse('Authentication required', 401)
     }
 
-    return createSuccessResponse(result)
+    const [subscriptionRecord] = await db
+      .select({ plan: subscription.plan })
+      .from(subscription)
+      .where(eq(subscription.referenceId, authenticatedUserId))
+      .limit(1)
+
+    const subscriptionPlan = (subscriptionRecord?.plan || 'free') as SubscriptionPlan
+
+    if (isAsync) {
+      try {
+        const rateLimiter = new RateLimiter()
+        const rateLimitCheck = await rateLimiter.checkRateLimit(
+          authenticatedUserId,
+          subscriptionPlan,
+          'api',
+          true // isAsync = true
+        )
+
+        if (!rateLimitCheck.allowed) {
+          logger.warn(`[${requestId}] Rate limit exceeded for async execution`, {
+            userId: authenticatedUserId,
+            remaining: rateLimitCheck.remaining,
+            resetAt: rateLimitCheck.resetAt,
+          })
+
+          return new Response(
+            JSON.stringify({
+              error: 'Rate limit exceeded',
+              message: `You have exceeded your async execution limit. ${rateLimitCheck.remaining} requests remaining. Limit resets at ${rateLimitCheck.resetAt}.`,
+              remaining: rateLimitCheck.remaining,
+              resetAt: rateLimitCheck.resetAt,
+            }),
+            {
+              status: 429,
+              headers: { 'Content-Type': 'application/json' },
+            }
+          )
+        }
+
+        // Rate limit passed - trigger the task
+        const handle = await tasks.trigger('workflow-execution', {
+          workflowId,
+          userId: authenticatedUserId,
+          input,
+          triggerType: 'api',
+          metadata: { triggerType: 'api' },
+        })
+
+        logger.info(
+          `[${requestId}] Created Trigger.dev task ${handle.id} for workflow ${workflowId}`
+        )
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            taskId: handle.id,
+            status: 'queued',
+            createdAt: new Date().toISOString(),
+            links: {
+              status: `/api/jobs/${handle.id}`,
+            },
+          }),
+          {
+            status: 202,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        )
+      } catch (error: any) {
+        logger.error(`[${requestId}] Failed to create Trigger.dev task:`, error)
+        return createErrorResponse('Failed to queue workflow execution', 500)
+      }
+    }
+
+    try {
+      const rateLimiter = new RateLimiter()
+      const rateLimitCheck = await rateLimiter.checkRateLimit(
+        authenticatedUserId,
+        subscriptionPlan,
+        triggerType,
+        false // isAsync = false for sync calls
+      )
+
+      if (!rateLimitCheck.allowed) {
+        throw new RateLimitError(
+          `Rate limit exceeded. You have ${rateLimitCheck.remaining} requests remaining. Resets at ${rateLimitCheck.resetAt.toISOString()}`
+        )
+      }
+
+      const result = await executeWorkflow(validation.workflow, requestId, input)
+
+      const hasResponseBlock = workflowHasResponseBlock(result)
+      if (hasResponseBlock) {
+        return createHttpResponseFromBlock(result)
+      }
+
+      // Filter out logs and workflowConnections from the API response
+      const filteredResult = createFilteredResult(result)
+      return createSuccessResponse(filteredResult)
+    } catch (error: any) {
+      if (error.message?.includes('Service overloaded')) {
+        return createErrorResponse(
+          'Service temporarily overloaded. Please try again later.',
+          503,
+          'SERVICE_OVERLOADED'
+        )
+      }
+      throw error
+    }
   } catch (error: any) {
-    logger.error(`[${requestId}] Error executing workflow: ${id}`, error)
+    logger.error(`[${requestId}] Error executing workflow: ${workflowId}`, error)
+
+    // Check if this is a rate limit error
+    if (error instanceof RateLimitError) {
+      return createErrorResponse(error.message, error.statusCode, 'RATE_LIMIT_EXCEEDED')
+    }
 
     // Check if this is a usage limit error
     if (error instanceof UsageLimitError) {
       return createErrorResponse(error.message, error.statusCode, 'USAGE_LIMIT_EXCEEDED')
+    }
+
+    // Check if this is a rate limit error (string match for backward compatibility)
+    if (error.message?.includes('Rate limit exceeded')) {
+      return createErrorResponse(error.message, 429, 'RATE_LIMIT_EXCEEDED')
     }
 
     return createErrorResponse(

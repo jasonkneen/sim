@@ -1,10 +1,15 @@
 import OpenAI from 'openai'
-import { createLogger } from '@/lib/logs/console-logger'
+import { createLogger } from '@/lib/logs/console/logger'
 import type { StreamingExecution } from '@/executor/types'
+import { getProviderDefaultModel, getProviderModels } from '@/providers/models'
+import type {
+  ProviderConfig,
+  ProviderRequest,
+  ProviderResponse,
+  TimeSegment,
+} from '@/providers/types'
+import { prepareToolsWithUsageControl, trackForcedToolUsage } from '@/providers/utils'
 import { executeTool } from '@/tools'
-import { getProviderDefaultModel, getProviderModels } from '../models'
-import type { ProviderConfig, ProviderRequest, ProviderResponse, TimeSegment } from '../types'
-import { prepareToolsWithUsageControl, trackForcedToolUsage } from '../utils'
 
 const logger = createLogger('XAIProvider')
 
@@ -329,7 +334,14 @@ export const xAIProvider: ProviderConfig = {
               // Add system parameters for execution
               const executionParams = {
                 ...toolParams,
-                ...(request.workflowId ? { _context: { workflowId: request.workflowId } } : {}),
+                ...(request.workflowId
+                  ? {
+                      _context: {
+                        workflowId: request.workflowId,
+                        ...(request.chatId ? { chatId: request.chatId } : {}),
+                      },
+                    }
+                  : {}),
                 ...(request.environmentVariables ? { envVars: request.environmentVariables } : {}),
               }
 

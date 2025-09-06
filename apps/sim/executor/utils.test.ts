@@ -1,7 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { StreamingResponseFormatProcessor, streamingResponseFormatProcessor } from './utils'
+import {
+  StreamingResponseFormatProcessor,
+  streamingResponseFormatProcessor,
+} from '@/executor/utils'
 
-vi.mock('@/lib/logs/console-logger', () => ({
+vi.mock('@/lib/logs/console/logger', () => ({
   createLogger: vi.fn().mockReturnValue({
     debug: vi.fn(),
     info: vi.fn(),

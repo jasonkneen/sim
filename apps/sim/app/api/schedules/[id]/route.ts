@@ -2,7 +2,7 @@ import crypto from 'crypto'
 import { eq } from 'drizzle-orm'
 import { type NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
-import { createLogger } from '@/lib/logs/console-logger'
+import { createLogger } from '@/lib/logs/console/logger'
 import { db } from '@/db'
 import { workflow, workflowSchedule } from '@/db/schema'
 
@@ -138,6 +138,29 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({
         message: 'Schedule activated successfully',
         nextRunAt,
+      })
+    }
+
+    if (action === 'disable' || (body.status && body.status === 'disabled')) {
+      if (schedule.status === 'disabled') {
+        return NextResponse.json({ message: 'Schedule is already disabled' }, { status: 200 })
+      }
+
+      const now = new Date()
+
+      await db
+        .update(workflowSchedule)
+        .set({
+          status: 'disabled',
+          updatedAt: now,
+          nextRunAt: null, // Clear next run time when disabled
+        })
+        .where(eq(workflowSchedule.id, scheduleId))
+
+      logger.info(`[${requestId}] Disabled schedule: ${scheduleId}`)
+
+      return NextResponse.json({
+        message: 'Schedule disabled successfully',
       })
     }
 

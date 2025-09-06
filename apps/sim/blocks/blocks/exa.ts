@@ -1,17 +1,6 @@
 import { ExaAIIcon } from '@/components/icons'
-import type {
-  ExaAnswerResponse,
-  ExaFindSimilarLinksResponse,
-  ExaGetContentsResponse,
-  ExaSearchResponse,
-} from '@/tools/exa/types'
-import type { BlockConfig } from '../types'
-
-type ExaResponse =
-  | ExaSearchResponse
-  | ExaGetContentsResponse
-  | ExaFindSimilarLinksResponse
-  | ExaAnswerResponse
+import type { BlockConfig } from '@/blocks/types'
+import type { ExaResponse } from '@/tools/exa/types'
 
 export const ExaBlock: BlockConfig<ExaResponse> = {
   type: 'exa',
@@ -19,12 +8,11 @@ export const ExaBlock: BlockConfig<ExaResponse> = {
   description: 'Search with Exa AI',
   longDescription:
     "Search the web, retrieve content, find similar links, and answer questions using Exa's powerful AI search capabilities.",
-  docsLink: 'https://docs.simstudio.ai/tools/exa',
+  docsLink: 'https://docs.sim.ai/tools/exa',
   category: 'tools',
   bgColor: '#1F40ED',
   icon: ExaAIIcon,
   subBlocks: [
-    // Operation selector
     {
       id: 'operation',
       title: 'Operation',
@@ -35,6 +23,7 @@ export const ExaBlock: BlockConfig<ExaResponse> = {
         { label: 'Get Contents', id: 'exa_get_contents' },
         { label: 'Find Similar Links', id: 'exa_find_similar_links' },
         { label: 'Answer', id: 'exa_answer' },
+        { label: 'Research', id: 'exa_research' },
       ],
       value: () => 'exa_search',
     },
@@ -46,6 +35,7 @@ export const ExaBlock: BlockConfig<ExaResponse> = {
       layout: 'full',
       placeholder: 'Enter your search query...',
       condition: { field: 'operation', value: 'exa_search' },
+      required: true,
     },
     {
       id: 'numResults',
@@ -71,7 +61,7 @@ export const ExaBlock: BlockConfig<ExaResponse> = {
         { label: 'Auto', id: 'auto' },
         { label: 'Neural', id: 'neural' },
         { label: 'Keyword', id: 'keyword' },
-        { label: 'Magic', id: 'magic' },
+        { label: 'Fast', id: 'fast' },
       ],
       value: () => 'auto',
       condition: { field: 'operation', value: 'exa_search' },
@@ -84,6 +74,7 @@ export const ExaBlock: BlockConfig<ExaResponse> = {
       layout: 'full',
       placeholder: 'Enter URLs to retrieve content from (comma-separated)...',
       condition: { field: 'operation', value: 'exa_get_contents' },
+      required: true,
     },
     {
       id: 'text',
@@ -108,6 +99,7 @@ export const ExaBlock: BlockConfig<ExaResponse> = {
       layout: 'full',
       placeholder: 'Enter URL to find similar links for...',
       condition: { field: 'operation', value: 'exa_find_similar_links' },
+      required: true,
     },
     {
       id: 'numResults',
@@ -132,6 +124,7 @@ export const ExaBlock: BlockConfig<ExaResponse> = {
       layout: 'full',
       placeholder: 'Enter your question...',
       condition: { field: 'operation', value: 'exa_answer' },
+      required: true,
     },
     {
       id: 'text',
@@ -139,6 +132,23 @@ export const ExaBlock: BlockConfig<ExaResponse> = {
       type: 'switch',
       layout: 'full',
       condition: { field: 'operation', value: 'exa_answer' },
+    },
+    // Research operation inputs
+    {
+      id: 'query',
+      title: 'Research Query',
+      type: 'long-input',
+      layout: 'full',
+      placeholder: 'Enter your research topic or question...',
+      condition: { field: 'operation', value: 'exa_research' },
+      required: true,
+    },
+    {
+      id: 'includeText',
+      title: 'Include Full Text',
+      type: 'switch',
+      layout: 'full',
+      condition: { field: 'operation', value: 'exa_research' },
     },
     // API Key (common)
     {
@@ -148,10 +158,17 @@ export const ExaBlock: BlockConfig<ExaResponse> = {
       layout: 'full',
       placeholder: 'Enter your Exa API key',
       password: true,
+      required: true,
     },
   ],
   tools: {
-    access: ['exa_search', 'exa_get_contents', 'exa_find_similar_links', 'exa_answer'],
+    access: [
+      'exa_search',
+      'exa_get_contents',
+      'exa_find_similar_links',
+      'exa_answer',
+      'exa_research',
+    ],
     config: {
       tool: (params) => {
         // Convert numResults to a number for operations that use it
@@ -168,6 +185,8 @@ export const ExaBlock: BlockConfig<ExaResponse> = {
             return 'exa_find_similar_links'
           case 'exa_answer':
             return 'exa_answer'
+          case 'exa_research':
+            return 'exa_research'
           default:
             return 'exa_search'
         }
@@ -175,27 +194,29 @@ export const ExaBlock: BlockConfig<ExaResponse> = {
     },
   },
   inputs: {
-    operation: { type: 'string', required: true },
-    apiKey: { type: 'string', required: true },
+    operation: { type: 'string', description: 'Operation to perform' },
+    apiKey: { type: 'string', description: 'Exa API key' },
     // Search operation
-    query: { type: 'string', required: false },
-    numResults: { type: 'number', required: false },
-    useAutoprompt: { type: 'boolean', required: false },
-    type: { type: 'string', required: false },
+    query: { type: 'string', description: 'Search query terms' },
+    numResults: { type: 'number', description: 'Number of results' },
+    useAutoprompt: { type: 'boolean', description: 'Use autoprompt feature' },
+    type: { type: 'string', description: 'Search type' },
     // Get Contents operation
-    urls: { type: 'string', required: false },
-    text: { type: 'boolean', required: false },
-    summaryQuery: { type: 'string', required: false },
+    urls: { type: 'string', description: 'URLs to retrieve' },
+    text: { type: 'boolean', description: 'Include text content' },
+    summaryQuery: { type: 'string', description: 'Summary query guidance' },
     // Find Similar Links operation
-    url: { type: 'string', required: false },
+    url: { type: 'string', description: 'Source URL' },
   },
   outputs: {
     // Search output
-    results: 'json',
+    results: { type: 'json', description: 'Search results' },
     // Find Similar Links output
-    similarLinks: 'json',
+    similarLinks: { type: 'json', description: 'Similar links found' },
     // Answer output
-    answer: 'string',
-    citations: 'json',
+    answer: { type: 'string', description: 'Generated answer' },
+    citations: { type: 'json', description: 'Answer citations' },
+    // Research output
+    research: { type: 'json', description: 'Research findings' },
   },
 }

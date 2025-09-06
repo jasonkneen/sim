@@ -52,13 +52,13 @@ With Tavily, you can:
 - **Process multiple URLs simultaneously**: Extract content from several web pages in a single request
 - **Receive AI-optimized results**: Get search results specifically formatted for consumption by AI systems
 
-In Sim Studio, the Tavily integration enables your agents to search the web and extract information as part of their workflows. This allows for sophisticated automation scenarios that require up-to-date information from the internet. Your agents can formulate search queries, retrieve relevant results, and extract content from specific web pages to inform their decision-making processes. This integration bridges the gap between your workflow automation and the vast knowledge available on the web, enabling your agents to access real-time information without manual intervention. By connecting Sim Studio with Tavily, you can create agents that stay current with the latest information, provide more accurate responses, and deliver more value to users.
+In Sim, the Tavily integration enables your agents to search the web and extract information as part of their workflows. This allows for sophisticated automation scenarios that require up-to-date information from the internet. Your agents can formulate search queries, retrieve relevant results, and extract content from specific web pages to inform their decision-making processes. This integration bridges the gap between your workflow automation and the vast knowledge available on the web, enabling your agents to access real-time information without manual intervention. By connecting Sim with Tavily, you can create agents that stay current with the latest information, provide more accurate responses, and deliver more value to users.
 {/* MANUAL-CONTENT-END */}
 
 
 ## Usage Instructions
 
-Access Tavily
+Access Tavily's AI-powered search engine to find relevant information from across the web. Extract and process content from specific URLs with customizable depth options.
 
 
 
@@ -78,13 +78,14 @@ Perform AI-powered web searches using Tavily
 
 #### Output
 
-| Parameter | Type |
-| --------- | ---- |
-| `query` | string |
-| `results` | string |
-| `url` | string |
-| `snippet` | string |
-| `raw_content` | string |
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `results` | json | Search results data |
+| `answer` | any | Search answer |
+| `query` | string | Query used |
+| `content` | string | Extracted content |
+| `title` | string | Page title |
+| `url` | string | Source URL |
 
 ### `tavily_extract`
 
@@ -100,33 +101,15 @@ Extract raw content from multiple web pages simultaneously using Tavily
 
 #### Output
 
-| Parameter | Type |
-| --------- | ---- |
-| `results` | string |
-| `failed_results` | string |
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `results` | json | Search results data |
+| `answer` | any | Search answer |
+| `query` | string | Query used |
+| `content` | string | Extracted content |
+| `title` | string | Page title |
+| `url` | string | Source URL |
 
-
-
-## Block Configuration
-
-### Input
-
-| Parameter | Type | Required | Description | 
-| --------- | ---- | -------- | ----------- | 
-| `operation` | string | Yes | Operation |
-
-
-
-### Outputs
-
-| Output | Type | Description |
-| ------ | ---- | ----------- |
-| `results` | json | results output from the block |
-| `answer` | any | answer output from the block |
-| `query` | string | query output from the block |
-| `content` | string | content output from the block |
-| `title` | string | title output from the block |
-| `url` | string | url output from the block |
 
 
 ## Notes

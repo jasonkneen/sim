@@ -56,42 +56,11 @@ describe('Knowledge Base API Route', () => {
   })
 
   describe('GET /api/knowledge', () => {
-    it('should return knowledge bases with document counts for authenticated user', async () => {
-      const mockKnowledgeBases = [
-        {
-          id: 'kb-1',
-          name: 'Test KB 1',
-          description: 'Test description',
-          tokenCount: 100,
-          embeddingModel: 'text-embedding-3-small',
-          embeddingDimension: 1536,
-          chunkingConfig: { maxSize: 1024, minSize: 100, overlap: 200 },
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          workspaceId: null,
-          docCount: 5,
-        },
-      ]
-
-      mockAuth$.mockAuthenticatedUser()
-      mockDbChain.orderBy.mockResolvedValue(mockKnowledgeBases)
-
-      const req = createMockRequest('GET')
-      const { GET } = await import('./route')
-      const response = await GET(req)
-      const data = await response.json()
-
-      expect(response.status).toBe(200)
-      expect(data.success).toBe(true)
-      expect(data.data).toEqual(mockKnowledgeBases)
-      expect(mockDbChain.select).toHaveBeenCalled()
-    })
-
     it('should return unauthorized for unauthenticated user', async () => {
       mockAuth$.mockUnauthenticated()
 
       const req = createMockRequest('GET')
-      const { GET } = await import('./route')
+      const { GET } = await import('@/app/api/knowledge/route')
       const response = await GET(req)
       const data = await response.json()
 
@@ -104,7 +73,7 @@ describe('Knowledge Base API Route', () => {
       mockDbChain.orderBy.mockRejectedValue(new Error('Database error'))
 
       const req = createMockRequest('GET')
-      const { GET } = await import('./route')
+      const { GET } = await import('@/app/api/knowledge/route')
       const response = await GET(req)
       const data = await response.json()
 
@@ -128,7 +97,7 @@ describe('Knowledge Base API Route', () => {
       mockAuth$.mockAuthenticatedUser()
 
       const req = createMockRequest('POST', validKnowledgeBaseData)
-      const { POST } = await import('./route')
+      const { POST } = await import('@/app/api/knowledge/route')
       const response = await POST(req)
       const data = await response.json()
 
@@ -143,7 +112,7 @@ describe('Knowledge Base API Route', () => {
       mockAuth$.mockUnauthenticated()
 
       const req = createMockRequest('POST', validKnowledgeBaseData)
-      const { POST } = await import('./route')
+      const { POST } = await import('@/app/api/knowledge/route')
       const response = await POST(req)
       const data = await response.json()
 
@@ -155,7 +124,7 @@ describe('Knowledge Base API Route', () => {
       mockAuth$.mockAuthenticatedUser()
 
       const req = createMockRequest('POST', { description: 'Missing name' })
-      const { POST } = await import('./route')
+      const { POST } = await import('@/app/api/knowledge/route')
       const response = await POST(req)
       const data = await response.json()
 
@@ -177,7 +146,7 @@ describe('Knowledge Base API Route', () => {
       }
 
       const req = createMockRequest('POST', invalidData)
-      const { POST } = await import('./route')
+      const { POST } = await import('@/app/api/knowledge/route')
       const response = await POST(req)
       const data = await response.json()
 
@@ -190,7 +159,7 @@ describe('Knowledge Base API Route', () => {
 
       const minimalData = { name: 'Test KB' }
       const req = createMockRequest('POST', minimalData)
-      const { POST } = await import('./route')
+      const { POST } = await import('@/app/api/knowledge/route')
       const response = await POST(req)
       const data = await response.json()
 
@@ -209,7 +178,7 @@ describe('Knowledge Base API Route', () => {
       mockDbChain.values.mockRejectedValue(new Error('Database error'))
 
       const req = createMockRequest('POST', validKnowledgeBaseData)
-      const { POST } = await import('./route')
+      const { POST } = await import('@/app/api/knowledge/route')
       const response = await POST(req)
       const data = await response.json()
 

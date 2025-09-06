@@ -1,5 +1,5 @@
 /**
- * Sim Studio Telemetry
+ * Sim Telemetry
  *
  * This file can be customized in forked repositories:
  * - Set TELEMETRY_ENDPOINT in telemetry.config.ts to your collector
@@ -11,7 +11,7 @@
 import { DiagConsoleLogger, DiagLogLevel, diag } from '@opentelemetry/api'
 import { env } from '@/lib/env'
 import { isProd } from '@/lib/environment'
-import { createLogger } from '@/lib/logs/console-logger'
+import { createLogger } from '@/lib/logs/console/logger'
 
 diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.ERROR)
 

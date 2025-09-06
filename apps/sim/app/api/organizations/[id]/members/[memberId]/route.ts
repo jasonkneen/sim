@@ -1,11 +1,13 @@
 import { and, eq } from 'drizzle-orm'
 import { type NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
-import { createLogger } from '@/lib/logs/console-logger'
+import { createLogger } from '@/lib/logs/console/logger'
 import { db } from '@/db'
 import { member, user, userStats } from '@/db/schema'
 
 const logger = createLogger('OrganizationMemberAPI')
+
+export const dynamic = 'force-dynamic'
 
 /**
  * GET /api/organizations/[id]/members/[memberId]

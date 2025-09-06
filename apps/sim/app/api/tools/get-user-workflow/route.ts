@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 import { type NextRequest, NextResponse } from 'next/server'
-import { createLogger } from '@/lib/logs/console-logger'
+import { createLogger } from '@/lib/logs/console/logger'
 import { loadWorkflowFromNormalizedTables } from '@/lib/workflows/db-helpers'
 import { generateWorkflowYaml } from '@/lib/workflows/yaml-generator'
 import { getBlock } from '@/blocks'
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    logger.info('Fetching workflow for YAML generation', { workflowId })
+    logger.info('Fetching user workflow', { workflowId })
 
     // Fetch workflow from database
     const [workflowRecord] = await db
@@ -163,7 +163,7 @@ export async function POST(request: NextRequest) {
     // Prepare response with clear context markers
     const response: any = {
       workflowContext: 'USER_SPECIFIC_WORKFLOW', // Clear marker for the LLM
-      note: 'This data represents only the blocks and configurations that the user has actually built in their current workflow, not all available Sim Studio capabilities.',
+      note: 'This data represents only the blocks and configurations that the user has actually built in their current workflow, not all available Sim capabilities.',
       yaml,
       format: 'yaml',
       summary: {
@@ -190,9 +190,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    logger.info('Successfully generated workflow YAML', {
+    logger.info('Successfully fetched user workflow YAML', {
       workflowId,
-      blockCount: response.blockCount,
+      blockCount: response.summary.blockCount,
       yamlLength: yaml.length,
     })
 

@@ -45,7 +45,7 @@ With Gmail, you can:
 - **Access from anywhere**: Use Gmail across devices with synchronized content and settings
 - **Integrate with other services**: Connect with Google Calendar, Drive, and other productivity tools
 
-In Sim Studio, the Gmail integration enables your agents to send, read, and search emails programmatically. This allows for powerful automation scenarios such as sending notifications, processing incoming messages, extracting information from emails, and managing communication workflows. Your agents can compose and send personalized emails, search for specific messages using Gmail's query syntax, and extract content from emails to use in other parts of your workflow. Coming soon, agents will also be able to listen for new emails in real-time, enabling responsive workflows that can trigger actions based on incoming messages. This integration bridges the gap between your AI workflows and email communications, enabling seamless interaction with one of the world's most widely used communication platforms.
+In Sim, the Gmail integration enables your agents to send, read, and search emails programmatically. This allows for powerful automation scenarios such as sending notifications, processing incoming messages, extracting information from emails, and managing communication workflows. Your agents can compose and send personalized emails, search for specific messages using Gmail's query syntax, and extract content from emails to use in other parts of your workflow. Coming soon, agents will also be able to listen for new emails in real-time, enabling responsive workflows that can trigger actions based on incoming messages. This integration bridges the gap between your AI workflows and email communications, enabling seamless interaction with one of the world's most widely used communication platforms.
 {/* MANUAL-CONTENT-END */}
 
 
@@ -72,12 +72,10 @@ Send emails using Gmail
 
 #### Output
 
-| Parameter | Type |
-| --------- | ---- |
-| `content` | string |
-| `metadata` | string |
-| `threadId` | string |
-| `labelIds` | string |
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `content` | string | Response content |
+| `metadata` | json | Email metadata |
 
 ### `gmail_draft`
 
@@ -94,13 +92,10 @@ Draft emails using Gmail
 
 #### Output
 
-| Parameter | Type |
-| --------- | ---- |
-| `content` | string |
-| `metadata` | string |
-| `message` | string |
-| `threadId` | string |
-| `labelIds` | string |
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `content` | string | Response content |
+| `metadata` | json | Email metadata |
 
 ### `gmail_read`
 
@@ -118,10 +113,10 @@ Read emails from Gmail
 
 #### Output
 
-| Parameter | Type |
-| --------- | ---- |
-| `content` | string |
-| `metadata` | string |
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `content` | string | Response content |
+| `metadata` | json | Email metadata |
 
 ### `gmail_search`
 
@@ -133,33 +128,15 @@ Search emails in Gmail
 | --------- | ---- | -------- | ----------- |
 | `accessToken` | string | Yes | Access token for Gmail API |
 | `query` | string | Yes | Search query for emails |
-| `maxResults` | number | No | Maximum number of results to return \(default: 1, max: 10\) |
+| `maxResults` | number | No | Maximum number of results to return |
 
 #### Output
 
-| Parameter | Type |
-| --------- | ---- |
-| `content` | string |
-| `metadata` | string |
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `content` | string | Response content |
+| `metadata` | json | Email metadata |
 
-
-
-## Block Configuration
-
-### Input
-
-| Parameter | Type | Required | Description | 
-| --------- | ---- | -------- | ----------- | 
-| `operation` | string | Yes | Operation |
-
-
-
-### Outputs
-
-| Output | Type | Description |
-| ------ | ---- | ----------- |
-| `content` | string | content output from the block |
-| `metadata` | json | metadata output from the block |
 
 
 ## Notes

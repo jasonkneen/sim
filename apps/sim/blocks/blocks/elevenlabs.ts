@@ -1,46 +1,16 @@
 import { ElevenLabsIcon } from '@/components/icons'
-import type { ToolResponse } from '@/tools/types'
-import type { BlockConfig } from '../types'
-
-interface ElevenLabsBlockResponse extends ToolResponse {
-  output: {
-    audioUrl: string
-  }
-}
+import type { BlockConfig } from '@/blocks/types'
+import type { ElevenLabsBlockResponse } from '@/tools/elevenlabs/types'
 
 export const ElevenLabsBlock: BlockConfig<ElevenLabsBlockResponse> = {
   type: 'elevenlabs',
   name: 'ElevenLabs',
   description: 'Convert TTS using ElevenLabs',
   longDescription: 'Generate realistic speech from text using ElevenLabs voices.',
-  docsLink: 'https://docs.simstudio.ai/tools/elevenlabs',
+  docsLink: 'https://docs.sim.ai/tools/elevenlabs',
   category: 'tools',
   bgColor: '#181C1E',
   icon: ElevenLabsIcon,
-
-  tools: {
-    access: ['elevenlabs_tts'],
-    config: {
-      tool: () => 'elevenlabs_tts',
-      params: (params) => ({
-        apiKey: params.apiKey,
-        text: params.text,
-        voiceId: params.voiceId,
-        modelId: params.modelId,
-      }),
-    },
-  },
-
-  inputs: {
-    text: { type: 'string', required: true },
-    voiceId: { type: 'string', required: true },
-    modelId: { type: 'string', required: false },
-    apiKey: { type: 'string', required: true },
-  },
-
-  outputs: {
-    audioUrl: 'string',
-  },
 
   subBlocks: [
     {
@@ -49,6 +19,7 @@ export const ElevenLabsBlock: BlockConfig<ElevenLabsBlockResponse> = {
       type: 'long-input',
       layout: 'full',
       placeholder: 'Enter the text to convert to speech',
+      required: true,
     },
     {
       id: 'voiceId',
@@ -56,6 +27,7 @@ export const ElevenLabsBlock: BlockConfig<ElevenLabsBlockResponse> = {
       type: 'short-input',
       layout: 'full',
       placeholder: 'Enter the voice ID',
+      required: true,
     },
     {
       id: 'modelId',
@@ -77,6 +49,31 @@ export const ElevenLabsBlock: BlockConfig<ElevenLabsBlockResponse> = {
       layout: 'full',
       placeholder: 'Enter your ElevenLabs API key',
       password: true,
+      required: true,
     },
   ],
+
+  tools: {
+    access: ['elevenlabs_tts'],
+    config: {
+      tool: () => 'elevenlabs_tts',
+      params: (params) => ({
+        apiKey: params.apiKey,
+        text: params.text,
+        voiceId: params.voiceId,
+        modelId: params.modelId,
+      }),
+    },
+  },
+
+  inputs: {
+    text: { type: 'string', description: 'Text to convert' },
+    voiceId: { type: 'string', description: 'Voice identifier' },
+    modelId: { type: 'string', description: 'Model identifier' },
+    apiKey: { type: 'string', description: 'ElevenLabs API key' },
+  },
+
+  outputs: {
+    audioUrl: { type: 'string', description: 'Generated audio URL' },
+  },
 }

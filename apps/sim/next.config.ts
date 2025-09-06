@@ -2,15 +2,44 @@ import path from 'path'
 import { withSentryConfig } from '@sentry/nextjs'
 import type { NextConfig } from 'next'
 import { env, isTruthy } from './lib/env'
-import { isDev, isProd } from './lib/environment'
+import { isDev, isHosted, isProd } from './lib/environment'
+import { getMainCSPPolicy, getWorkflowExecutionCSPPolicy } from './lib/security/csp'
 
 const nextConfig: NextConfig = {
   devIndicators: false,
   images: {
-    domains: [
-      'avatars.githubusercontent.com',
-      'oaidalleapiprodscus.blob.core.windows.net',
-      'api.stability.ai',
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'avatars.githubusercontent.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'api.stability.ai',
+      },
+      // Azure Blob Storage
+      {
+        protocol: 'https',
+        hostname: '*.blob.core.windows.net',
+      },
+      // AWS S3 - various regions and bucket configurations
+      {
+        protocol: 'https',
+        hostname: '*.s3.amazonaws.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.s3.*.amazonaws.com',
+      },
+      // Custom domain for file storage if configured
+      ...(env.NEXT_PUBLIC_BLOB_BASE_URL
+        ? [
+            {
+              protocol: 'https' as const,
+              hostname: new URL(env.NEXT_PUBLIC_BLOB_BASE_URL).hostname,
+            },
+          ]
+        : []),
     ],
   },
   typescript: {
@@ -43,7 +72,13 @@ const nextConfig: NextConfig = {
     ],
     outputFileTracingRoot: path.join(__dirname, '../../'),
   }),
-  transpilePackages: ['prettier', '@react-email/components', '@react-email/render'],
+  transpilePackages: [
+    'prettier',
+    '@react-email/components',
+    '@react-email/render',
+    '@t3-oss/env-nextjs',
+    '@t3-oss/env-core',
+  ],
   async headers() {
     return [
       {
@@ -84,13 +119,13 @@ const nextConfig: NextConfig = {
           { key: 'Cross-Origin-Opener-Policy', value: 'unsafe-none' },
           {
             key: 'Content-Security-Policy',
-            value: "default-src * 'unsafe-inline' 'unsafe-eval'; connect-src *;",
+            value: getWorkflowExecutionCSPPolicy(),
           },
         ],
       },
       {
-        // Exclude Vercel internal resources and static assets from strict COEP
-        source: '/((?!_next|_vercel|api|favicon.ico|w/.*|api/tools/drive).*)',
+        // Exclude Vercel internal resources and static assets from strict COEP, Google Drive Picker to prevent 'refused to connect' issue
+        source: '/((?!_next|_vercel|api|favicon.ico|w/.*|workspace/.*|api/tools/drive).*)',
         headers: [
           {
             key: 'Cross-Origin-Embedder-Policy',
@@ -112,7 +147,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'Cross-Origin-Opener-Policy',
-            value: 'same-origin',
+            value: 'same-origin-allow-popups',
           },
         ],
       },
@@ -126,9 +161,10 @@ const nextConfig: NextConfig = {
           },
         ],
       },
-      // Apply security headers to all routes
+      // Apply security headers to routes not handled by middleware runtime CSP
+      // Middleware handles: /, /workspace/*, /chat/*
       {
-        source: '/:path*',
+        source: '/((?!workspace|chat$).*)',
         headers: [
           {
             key: 'X-Content-Type-Options',
@@ -140,9 +176,30 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'Content-Security-Policy',
-            value: `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.google.com https://apis.google.com https://*.vercel-scripts.com https://*.vercel-insights.com https://vercel.live https://*.vercel.live https://vercel.com https://*.vercel.app https://vitals.vercel-insights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://*.googleusercontent.com https://*.google.com https://*.atlassian.com https://cdn.discordapp.com https://*.githubusercontent.com; media-src 'self' blob:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' ${env.NEXT_PUBLIC_APP_URL || ''} ${env.OLLAMA_URL || 'http://localhost:11434'} ${env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3002'} ${env.NEXT_PUBLIC_SOCKET_URL?.replace('http://', 'ws://').replace('https://', 'wss://') || 'ws://localhost:3002'} https://*.up.railway.app wss://*.up.railway.app https://api.browser-use.com https://*.googleapis.com https://*.amazonaws.com https://*.s3.amazonaws.com https://*.blob.core.windows.net https://*.vercel-insights.com https://vitals.vercel-insights.com https://*.atlassian.com https://vercel.live https://*.vercel.live https://vercel.com https://*.vercel.app wss://*.vercel.app; frame-src https://drive.google.com https://*.google.com; frame-ancestors 'self'; form-action 'self'; base-uri 'self'; object-src 'none'`,
+            value: getMainCSPPolicy(),
           },
         ],
+      },
+    ]
+  },
+  async redirects() {
+    // Only enable domain redirects for the hosted version
+    if (!isHosted) {
+      return []
+    }
+
+    return [
+      {
+        source: '/((?!api|_next|_vercel|favicon|static|.*\\..*).*)',
+        destination: 'https://www.sim.ai/$1',
+        permanent: true,
+        has: [{ type: 'host', value: 'simstudio.ai' }],
+      },
+      {
+        source: '/((?!api|_next|_vercel|favicon|static|.*\\..*).*)',
+        destination: 'https://www.sim.ai/$1',
+        permanent: true,
+        has: [{ type: 'host', value: 'www.simstudio.ai' }],
       },
     ]
   },

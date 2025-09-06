@@ -1,6 +1,6 @@
 import { HuggingFaceIcon } from '@/components/icons'
+import type { BlockConfig } from '@/blocks/types'
 import type { HuggingFaceChatResponse } from '@/tools/huggingface/types'
-import type { BlockConfig } from '../types'
 
 export const HuggingFaceBlock: BlockConfig<HuggingFaceChatResponse> = {
   type: 'huggingface',
@@ -8,7 +8,7 @@ export const HuggingFaceBlock: BlockConfig<HuggingFaceChatResponse> = {
   description: 'Use Hugging Face Inference API',
   longDescription:
     'Generate completions using Hugging Face Inference API with access to various open-source models. Leverage cutting-edge AI models for chat completions, content generation, and AI-powered conversations with customizable parameters.',
-  docsLink: 'https://docs.simstudio.ai/tools/huggingface',
+  docsLink: 'https://docs.sim.ai/tools/huggingface',
   category: 'tools',
   bgColor: '#0B0F19',
   icon: HuggingFaceIcon,
@@ -26,6 +26,7 @@ export const HuggingFaceBlock: BlockConfig<HuggingFaceChatResponse> = {
       title: 'User Prompt',
       type: 'long-input',
       layout: 'full',
+      required: true,
       placeholder: 'Enter your message here...',
       rows: 3,
     },
@@ -34,6 +35,7 @@ export const HuggingFaceBlock: BlockConfig<HuggingFaceChatResponse> = {
       title: 'Provider',
       type: 'dropdown',
       layout: 'half',
+      required: true,
       options: [
         { label: 'Novita', id: 'novita' },
         { label: 'Cerebras', id: 'cerebras' },
@@ -55,6 +57,7 @@ export const HuggingFaceBlock: BlockConfig<HuggingFaceChatResponse> = {
       title: 'Model',
       type: 'short-input',
       layout: 'full',
+      required: true,
       placeholder:
         'e.g., deepseek/deepseek-v3-0324, llama3.1-8b, meta-llama/Llama-3.2-3B-Instruct-Turbo',
       description: 'The model must be available for the selected provider.',
@@ -80,6 +83,7 @@ export const HuggingFaceBlock: BlockConfig<HuggingFaceChatResponse> = {
       title: 'API Token',
       type: 'short-input',
       layout: 'full',
+      required: true,
       placeholder: 'Enter your Hugging Face API token',
       password: true,
     },
@@ -105,17 +109,17 @@ export const HuggingFaceBlock: BlockConfig<HuggingFaceChatResponse> = {
     },
   },
   inputs: {
-    systemPrompt: { type: 'string', required: false },
-    content: { type: 'string', required: true },
-    provider: { type: 'string', required: true },
-    model: { type: 'string', required: true },
-    temperature: { type: 'string', required: false },
-    maxTokens: { type: 'string', required: false },
-    apiKey: { type: 'string', required: true },
+    systemPrompt: { type: 'string', description: 'System instructions' },
+    content: { type: 'string', description: 'User message content' },
+    provider: { type: 'string', description: 'Model provider' },
+    model: { type: 'string', description: 'Model identifier' },
+    temperature: { type: 'string', description: 'Response randomness' },
+    maxTokens: { type: 'string', description: 'Maximum output tokens' },
+    apiKey: { type: 'string', description: 'API access token' },
   },
   outputs: {
-    content: 'string',
-    model: 'string',
-    usage: 'json',
+    content: { type: 'string', description: 'Generated response' },
+    model: { type: 'string', description: 'Model used' },
+    usage: { type: 'json', description: 'Token usage stats' },
   },
 }

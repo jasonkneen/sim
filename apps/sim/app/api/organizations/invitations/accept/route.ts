@@ -3,11 +3,13 @@ import { and, eq } from 'drizzle-orm'
 import { type NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { env } from '@/lib/env'
-import { createLogger } from '@/lib/logs/console-logger'
+import { createLogger } from '@/lib/logs/console/logger'
 import { db } from '@/db'
-import { invitation, member, permissions, workspaceInvitation, workspaceMember } from '@/db/schema'
+import { invitation, member, permissions, workspaceInvitation } from '@/db/schema'
 
-const logger = createLogger('OrganizationInvitationAcceptance')
+const logger = createLogger('OrganizationInvitationAcceptanceAPI')
+
+export const dynamic = 'force-dynamic'
 
 // Accept an organization invitation and any associated workspace invitations
 export async function GET(req: NextRequest) {
@@ -17,7 +19,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(
       new URL(
         '/invite/invite-error?reason=missing-invitation-id',
-        env.NEXT_PUBLIC_APP_URL || 'https://simstudio.ai'
+        env.NEXT_PUBLIC_APP_URL || 'https://sim.ai'
       )
     )
   }
@@ -29,7 +31,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(
       new URL(
         `/invite/organization?id=${invitationId}`,
-        env.NEXT_PUBLIC_APP_URL || 'https://simstudio.ai'
+        env.NEXT_PUBLIC_APP_URL || 'https://sim.ai'
       )
     )
   }
@@ -46,7 +48,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(
         new URL(
           '/invite/invite-error?reason=invalid-invitation',
-          env.NEXT_PUBLIC_APP_URL || 'https://simstudio.ai'
+          env.NEXT_PUBLIC_APP_URL || 'https://sim.ai'
         )
       )
     }
@@ -56,10 +58,7 @@ export async function GET(req: NextRequest) {
     // Check if invitation has expired
     if (orgInvitation.expiresAt && new Date() > orgInvitation.expiresAt) {
       return NextResponse.redirect(
-        new URL(
-          '/invite/invite-error?reason=expired',
-          env.NEXT_PUBLIC_APP_URL || 'https://simstudio.ai'
-        )
+        new URL('/invite/invite-error?reason=expired', env.NEXT_PUBLIC_APP_URL || 'https://sim.ai')
       )
     }
 
@@ -68,7 +67,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(
         new URL(
           '/invite/invite-error?reason=already-processed',
-          env.NEXT_PUBLIC_APP_URL || 'https://simstudio.ai'
+          env.NEXT_PUBLIC_APP_URL || 'https://sim.ai'
         )
       )
     }
@@ -78,7 +77,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(
         new URL(
           '/invite/invite-error?reason=email-mismatch',
-          env.NEXT_PUBLIC_APP_URL || 'https://simstudio.ai'
+          env.NEXT_PUBLIC_APP_URL || 'https://sim.ai'
         )
       )
     }
@@ -99,7 +98,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(
         new URL(
           '/invite/invite-error?reason=already-member',
-          env.NEXT_PUBLIC_APP_URL || 'https://simstudio.ai'
+          env.NEXT_PUBLIC_APP_URL || 'https://sim.ai'
         )
       )
     }
@@ -135,18 +134,6 @@ export async function GET(req: NextRequest) {
           wsInvitation.expiresAt &&
           new Date().toISOString() <= wsInvitation.expiresAt.toISOString()
         ) {
-          // Check if user isn't already a member of the workspace
-          const existingWorkspaceMember = await tx
-            .select()
-            .from(workspaceMember)
-            .where(
-              and(
-                eq(workspaceMember.workspaceId, wsInvitation.workspaceId),
-                eq(workspaceMember.userId, session.user.id)
-              )
-            )
-            .limit(1)
-
           // Check if user doesn't already have permissions on the workspace
           const existingPermission = await tx
             .select()
@@ -160,17 +147,7 @@ export async function GET(req: NextRequest) {
             )
             .limit(1)
 
-          if (existingWorkspaceMember.length === 0 && existingPermission.length === 0) {
-            // Add user as workspace member
-            await tx.insert(workspaceMember).values({
-              id: randomUUID(),
-              workspaceId: wsInvitation.workspaceId,
-              userId: session.user.id,
-              role: wsInvitation.role,
-              joinedAt: new Date(),
-              updatedAt: new Date(),
-            })
-
+          if (existingPermission.length === 0) {
             // Add workspace permissions
             await tx.insert(permissions).values({
               id: randomUUID(),
@@ -206,7 +183,7 @@ export async function GET(req: NextRequest) {
 
     // Redirect to success page or main app
     return NextResponse.redirect(
-      new URL('/workspaces?invite=accepted', env.NEXT_PUBLIC_APP_URL || 'https://simstudio.ai')
+      new URL('/workspaces?invite=accepted', env.NEXT_PUBLIC_APP_URL || 'https://sim.ai')
     )
   } catch (error) {
     logger.error('Failed to accept organization invitation', {
@@ -218,7 +195,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(
       new URL(
         '/invite/invite-error?reason=server-error',
-        env.NEXT_PUBLIC_APP_URL || 'https://simstudio.ai'
+        env.NEXT_PUBLIC_APP_URL || 'https://sim.ai'
       )
     )
   }
@@ -311,17 +288,6 @@ export async function POST(req: NextRequest) {
           wsInvitation.expiresAt &&
           new Date().toISOString() <= wsInvitation.expiresAt.toISOString()
         ) {
-          const existingWorkspaceMember = await tx
-            .select()
-            .from(workspaceMember)
-            .where(
-              and(
-                eq(workspaceMember.workspaceId, wsInvitation.workspaceId),
-                eq(workspaceMember.userId, session.user.id)
-              )
-            )
-            .limit(1)
-
           const existingPermission = await tx
             .select()
             .from(permissions)
@@ -334,16 +300,7 @@ export async function POST(req: NextRequest) {
             )
             .limit(1)
 
-          if (existingWorkspaceMember.length === 0 && existingPermission.length === 0) {
-            await tx.insert(workspaceMember).values({
-              id: randomUUID(),
-              workspaceId: wsInvitation.workspaceId,
-              userId: session.user.id,
-              role: wsInvitation.role,
-              joinedAt: new Date(),
-              updatedAt: new Date(),
-            })
-
+          if (existingPermission.length === 0) {
             await tx.insert(permissions).values({
               id: randomUUID(),
               userId: session.user.id,

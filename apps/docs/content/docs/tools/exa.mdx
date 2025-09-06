@@ -26,7 +26,7 @@ import { BlockInfoCard } from "@/components/ui/block-info-card"
 />
 
 {/* MANUAL-CONTENT-START:intro */}
-[Exa](https://exa.ai/) is an AI-powered search engine designed specifically for developers and researchers that provides highly relevant and up-to-date information from across the web. It combines advanced semantic search capabilities with AI understanding to deliver more accurate and contextually relevant results than traditional search engines.
+[Exa](https://exa.ai/) is an AI-powered search engine designed specifically for developers and researchers, providing highly relevant and up-to-date information from across the web. It combines advanced semantic search capabilities with AI understanding to deliver more accurate and contextually relevant results than traditional search engines.
 
 With Exa, you can:
 
@@ -35,14 +35,16 @@ With Exa, you can:
 - **Access up-to-date information**: Retrieve current information from across the web
 - **Find similar content**: Discover related resources based on content similarity
 - **Extract webpage contents**: Retrieve and process the full text of web pages
+- **Answer questions with citations**: Ask questions and receive direct answers with supporting sources
+- **Perform research tasks**: Automate multi-step research workflows to gather, synthesize, and summarize information
 
-In Sim Studio, the Exa integration allows your agents to search the web for information, retrieve content from specific URLs, and find similar resources - all programmatically through API calls. This enables your agents to access real-time information from the internet, enhancing their ability to provide accurate, current, and relevant responses. The integration is particularly valuable for research tasks, information gathering, content discovery, and answering questions that require up-to-date information from across the web.
+In Sim, the Exa integration allows your agents to search the web for information, retrieve content from specific URLs, find similar resources, answer questions with citations, and conduct research tasks—all programmatically through API calls. This enables your agents to access real-time information from the internet, enhancing their ability to provide accurate, current, and relevant responses. The integration is particularly valuable for research tasks, information gathering, content discovery, and answering questions that require up-to-date information from across the web.
 {/* MANUAL-CONTENT-END */}
 
 
 ## Usage Instructions
 
-Search the web, retrieve content, find similar links, and answer questions using Exa
+Search the web, retrieve content, find similar links, and answer questions using Exa's powerful AI search capabilities.
 
 
 
@@ -59,22 +61,18 @@ Search the web using Exa AI. Returns relevant search results with titles, URLs, 
 | `query` | string | Yes | The search query to execute |
 | `numResults` | number | No | Number of results to return \(default: 10, max: 25\) |
 | `useAutoprompt` | boolean | No | Whether to use autoprompt to improve the query \(default: false\) |
-| `type` | string | No | Search type: neural, keyword, auto or magic \(default: auto\) |
+| `type` | string | No | Search type: neural, keyword, auto or fast \(default: auto\) |
 | `apiKey` | string | Yes | Exa AI API Key |
 
 #### Output
 
-| Parameter | Type |
-| --------- | ---- |
-| `results` | string |
-| `url` | string |
-| `publishedDate` | string |
-| `author` | string |
-| `summary` | string |
-| `favicon` | string |
-| `image` | string |
-| `text` | string |
-| `score` | string |
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `results` | json | Search results |
+| `similarLinks` | json | Similar links found |
+| `answer` | string | Generated answer |
+| `citations` | json | Answer citations |
+| `research` | json | Research findings |
 
 ### `exa_get_contents`
 
@@ -91,12 +89,13 @@ Retrieve the contents of webpages using Exa AI. Returns the title, text content,
 
 #### Output
 
-| Parameter | Type |
-| --------- | ---- |
-| `results` | string |
-| `title` | string |
-| `text` | string |
-| `summary` | string |
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `results` | json | Search results |
+| `similarLinks` | json | Similar links found |
+| `answer` | string | Generated answer |
+| `citations` | json | Answer citations |
+| `research` | json | Research findings |
 
 ### `exa_find_similar_links`
 
@@ -113,12 +112,13 @@ Find webpages similar to a given URL using Exa AI. Returns a list of similar lin
 
 #### Output
 
-| Parameter | Type |
-| --------- | ---- |
-| `similarLinks` | string |
-| `url` | string |
-| `text` | string |
-| `score` | string |
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `results` | json | Search results |
+| `similarLinks` | json | Similar links found |
+| `answer` | string | Generated answer |
+| `citations` | json | Answer citations |
+| `research` | json | Research findings |
 
 ### `exa_answer`
 
@@ -134,34 +134,36 @@ Get an AI-generated answer to a question with citations from the web using Exa A
 
 #### Output
 
-| Parameter | Type |
-| --------- | ---- |
-| `query` | string |
-| `answer` | string |
-| `citations` | string |
-| `url` | string |
-| `text` | string |
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `results` | json | Search results |
+| `similarLinks` | json | Similar links found |
+| `answer` | string | Generated answer |
+| `citations` | json | Answer citations |
+| `research` | json | Research findings |
 
+### `exa_research`
 
+Perform comprehensive research using AI to generate detailed reports with citations
 
-## Block Configuration
+#### Input
 
-### Input
+| Parameter | Type | Required | Description |
+| --------- | ---- | -------- | ----------- |
+| `query` | string | Yes | Research query or topic |
+| `includeText` | boolean | No | Include full text content in results |
+| `apiKey` | string | Yes | Exa AI API Key |
 
-| Parameter | Type | Required | Description | 
-| --------- | ---- | -------- | ----------- | 
-| `operation` | string | Yes | Operation |
+#### Output
 
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `results` | json | Search results |
+| `similarLinks` | json | Similar links found |
+| `answer` | string | Generated answer |
+| `citations` | json | Answer citations |
+| `research` | json | Research findings |
 
-
-### Outputs
-
-| Output | Type | Description |
-| ------ | ---- | ----------- |
-| `results` | json | results output from the block |
-| `similarLinks` | json | similarLinks output from the block |
-| `answer` | string | answer output from the block |
-| `citations` | json | citations output from the block |
 
 
 ## Notes

@@ -121,7 +121,7 @@ describe('Scheduled Workflow Execution API Route', () => {
       })),
     }))
 
-    const { GET } = await import('./route')
+    const { GET } = await import('@/app/api/schedules/execute/route')
     const response = await GET()
     expect(response).toBeDefined()
 
@@ -131,19 +131,13 @@ describe('Scheduled Workflow Execution API Route', () => {
   })
 
   it('should handle errors during scheduled execution gracefully', async () => {
-    const persistExecutionErrorMock = vi.fn().mockResolvedValue(undefined)
-
-    vi.doMock('@/lib/logs/execution-logger', () => ({
-      persistExecutionError: persistExecutionErrorMock,
-    }))
-
     vi.doMock('@/executor', () => ({
       Executor: vi.fn().mockImplementation(() => ({
         execute: vi.fn().mockRejectedValue(new Error('Execution failed')),
       })),
     }))
 
-    const { GET } = await import('./route')
+    const { GET } = await import('@/app/api/schedules/execute/route')
     const response = await GET()
 
     expect(response).toBeDefined()
@@ -172,7 +166,7 @@ describe('Scheduled Workflow Execution API Route', () => {
       return { db: mockDb }
     })
 
-    const { GET } = await import('./route')
+    const { GET } = await import('@/app/api/schedules/execute/route')
     const response = await GET()
     expect(response.status).toBe(200)
     const data = await response.json()
@@ -200,7 +194,7 @@ describe('Scheduled Workflow Execution API Route', () => {
       return { db: mockDb }
     })
 
-    const { GET } = await import('./route')
+    const { GET } = await import('@/app/api/schedules/execute/route')
     const response = await GET()
     expect(response.status).toBe(500)
     const data = await response.json()
@@ -232,7 +226,7 @@ describe('Scheduled Workflow Execution API Route', () => {
       ],
     })
 
-    const { GET } = await import('./route')
+    const { GET } = await import('@/app/api/schedules/execute/route')
     const response = await GET()
 
     expect(response.status).toBe(200)
@@ -262,7 +256,7 @@ describe('Scheduled Workflow Execution API Route', () => {
       ],
     })
 
-    const { GET } = await import('./route')
+    const { GET } = await import('@/app/api/schedules/execute/route')
     const response = await GET()
 
     expect(response.status).toBe(200)

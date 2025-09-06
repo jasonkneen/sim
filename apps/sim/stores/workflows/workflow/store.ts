@@ -1,15 +1,26 @@
 import type { Edge } from 'reactflow'
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
+import { createLogger } from '@/lib/logs/console/logger'
 import { getBlock } from '@/blocks'
 import { resolveOutputType } from '@/blocks/utils'
-import { pushHistory, type WorkflowStoreWithHistory, withHistory } from '../middleware'
-import { useWorkflowRegistry } from '../registry/store'
-import { useSubBlockStore } from '../subblock/store'
-// import { markWorkflowsDirty, workflowSync } from '../sync' // Disabled for socket-based sync
-import { mergeSubblockState } from '../utils'
-import type { Position, SubBlockState, SyncControl, WorkflowState } from './types'
-import { generateLoopBlocks, generateParallelBlocks } from './utils'
+import {
+  pushHistory,
+  type WorkflowStoreWithHistory,
+  withHistory,
+} from '@/stores/workflows/middleware'
+import { useWorkflowRegistry } from '@/stores/workflows/registry/store'
+import { useSubBlockStore } from '@/stores/workflows/subblock/store'
+import { mergeSubblockState } from '@/stores/workflows/utils'
+import type {
+  Position,
+  SubBlockState,
+  SyncControl,
+  WorkflowState,
+} from '@/stores/workflows/workflow/types'
+import { generateLoopBlocks, generateParallelBlocks } from '@/stores/workflows/workflow/utils'
+
+const logger = createLogger('WorkflowStore')
 
 const initialState = {
   blocks: {},
@@ -23,7 +34,6 @@ const initialState = {
   // New field for per-workflow deployment tracking
   deploymentStatuses: {},
   needsRedeployment: false,
-  hasActiveSchedule: false,
   hasActiveWebhook: false,
   history: {
     past: [],
@@ -210,11 +220,11 @@ export const useWorkflowStore = create<WorkflowStoreWithHistory>()(
       updateParentId: (id: string, parentId: string, extent: 'parent') => {
         const block = get().blocks[id]
         if (!block) {
-          console.warn(`Cannot set parent: Block ${id} not found`)
+          logger.warn(`Cannot set parent: Block ${id} not found`)
           return
         }
 
-        console.log('UpdateParentId called:', {
+        logger.info('UpdateParentId called:', {
           blockId: id,
           blockName: block.name,
           blockType: block.type,
@@ -225,7 +235,7 @@ export const useWorkflowStore = create<WorkflowStoreWithHistory>()(
 
         // Skip if the parent ID hasn't changed
         if (block.data?.parentId === parentId) {
-          console.log('Parent ID unchanged, skipping update')
+          logger.info('Parent ID unchanged, skipping update')
           return
         }
 
@@ -261,7 +271,7 @@ export const useWorkflowStore = create<WorkflowStoreWithHistory>()(
           parallels: { ...get().parallels },
         }
 
-        console.log('[WorkflowStore/updateParentId] Updated parentId relationship:', {
+        logger.info('[WorkflowStore/updateParentId] Updated parentId relationship:', {
           blockId: id,
           newParentId: parentId || 'None (removed parent)',
           keepingPosition: absolutePosition,
@@ -307,7 +317,7 @@ export const useWorkflowStore = create<WorkflowStoreWithHistory>()(
         // Start recursive search from the target block
         findAllDescendants(id)
 
-        console.log('[WorkflowStore/removeBlock] Found blocks to remove:', {
+        logger.info('Found blocks to remove:', {
           targetId: id,
           totalBlocksToRemove: Array.from(blocksToRemove),
           includesHierarchy: blocksToRemove.size > 1,
@@ -391,7 +401,7 @@ export const useWorkflowStore = create<WorkflowStoreWithHistory>()(
         // Validate the edge exists
         const edgeToRemove = get().edges.find((edge) => edge.id === edgeId)
         if (!edgeToRemove) {
-          console.warn(`Attempted to remove non-existent edge: ${edgeId}`)
+          logger.warn(`Attempted to remove non-existent edge: ${edgeId}`)
           return
         }
 
@@ -436,7 +446,6 @@ export const useWorkflowStore = create<WorkflowStoreWithHistory>()(
           lastSaved: Date.now(),
           isDeployed: false,
           isPublished: false,
-          hasActiveSchedule: false,
           hasActiveWebhook: false,
         }
         set(newState)
@@ -799,23 +808,9 @@ export const useWorkflowStore = create<WorkflowStoreWithHistory>()(
         }))
       },
 
-      setScheduleStatus: (hasActiveSchedule: boolean) => {
-        // Only update if the status has changed to avoid unnecessary rerenders
-        if (get().hasActiveSchedule !== hasActiveSchedule) {
-          set({ hasActiveSchedule })
-          get().updateLastSaved()
-          // Note: Socket.IO handles real-time sync automatically
-        }
-      },
-
       setWebhookStatus: (hasActiveWebhook: boolean) => {
         // Only update if the status has changed to avoid unnecessary rerenders
         if (get().hasActiveWebhook !== hasActiveWebhook) {
-          // If the workflow has an active schedule, disable it
-          if (get().hasActiveSchedule) {
-            get().setScheduleStatus(false)
-          }
-
           set({ hasActiveWebhook })
           get().updateLastSaved()
           // Note: Socket.IO handles real-time sync automatically
@@ -826,7 +821,7 @@ export const useWorkflowStore = create<WorkflowStoreWithHistory>()(
         const activeWorkflowId = useWorkflowRegistry.getState().activeWorkflowId
 
         if (!activeWorkflowId) {
-          console.error('Cannot revert: no active workflow ID')
+          logger.error('Cannot revert: no active workflow ID')
           return
         }
 
@@ -899,13 +894,13 @@ export const useWorkflowStore = create<WorkflowStoreWithHistory>()(
 
           if (!response.ok) {
             const errorData = await response.json()
-            console.error('Failed to persist revert to deployed state:', errorData.error)
+            logger.error('Failed to persist revert to deployed state:', errorData.error)
             // Don't throw error to avoid breaking the UI, but log it
           } else {
-            console.log('Successfully persisted revert to deployed state')
+            logger.info('Successfully persisted revert to deployed state')
           }
         } catch (error) {
-          console.error('Error calling revert to deployed API:', error)
+          logger.error('Error calling revert to deployed API:', error)
           // Don't throw error to avoid breaking the UI
         }
       },

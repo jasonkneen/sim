@@ -51,6 +51,11 @@ vi.mock('@/providers/utils', () => ({
   }),
 }))
 
+const mockCheckKnowledgeBaseAccess = vi.fn()
+vi.mock('@/app/api/knowledge/utils', () => ({
+  checkKnowledgeBaseAccess: mockCheckKnowledgeBaseAccess,
+}))
+
 mockConsoleLogger()
 
 describe('Knowledge Search API Route', () => {
@@ -132,7 +137,11 @@ describe('Knowledge Search API Route', () => {
     it('should perform search successfully with single knowledge base', async () => {
       mockGetUserId.mockResolvedValue('user-123')
 
-      mockDbChain.where.mockResolvedValueOnce(mockKnowledgeBases)
+      // Mock knowledge base access check to return success
+      mockCheckKnowledgeBaseAccess.mockResolvedValue({
+        hasAccess: true,
+        knowledgeBase: mockKnowledgeBases[0],
+      })
 
       mockDbChain.limit.mockResolvedValueOnce(mockSearchResults)
 
@@ -145,9 +154,13 @@ describe('Knowledge Search API Route', () => {
       })
 
       const req = createMockRequest('POST', validSearchData)
-      const { POST } = await import('./route')
+      const { POST } = await import('@/app/api/knowledge/search/route')
       const response = await POST(req)
       const data = await response.json()
+
+      if (response.status !== 200) {
+        console.log('Test failed with response:', data)
+      }
 
       expect(response.status).toBe(200)
       expect(data.success).toBe(true)
@@ -171,7 +184,10 @@ describe('Knowledge Search API Route', () => {
 
       mockGetUserId.mockResolvedValue('user-123')
 
-      mockDbChain.where.mockResolvedValueOnce(multiKbs)
+      // Mock knowledge base access check to return success for both KBs
+      mockCheckKnowledgeBaseAccess
+        .mockResolvedValueOnce({ hasAccess: true, knowledgeBase: multiKbs[0] })
+        .mockResolvedValueOnce({ hasAccess: true, knowledgeBase: multiKbs[1] })
 
       mockDbChain.limit.mockResolvedValueOnce(mockSearchResults)
 
@@ -184,7 +200,7 @@ describe('Knowledge Search API Route', () => {
       })
 
       const req = createMockRequest('POST', multiKbData)
-      const { POST } = await import('./route')
+      const { POST } = await import('@/app/api/knowledge/search/route')
       const response = await POST(req)
       const data = await response.json()
 
@@ -201,9 +217,13 @@ describe('Knowledge Search API Route', () => {
 
       mockGetUserId.mockResolvedValue('user-123')
 
-      mockDbChain.where.mockResolvedValueOnce(mockKnowledgeBases) // First call: get knowledge bases
+      // Mock knowledge base access check to return success
+      mockCheckKnowledgeBaseAccess.mockResolvedValue({
+        hasAccess: true,
+        knowledgeBase: mockKnowledgeBases[0],
+      })
 
-      mockDbChain.limit.mockResolvedValueOnce(mockSearchResults) // Second call: search results
+      mockDbChain.limit.mockResolvedValueOnce(mockSearchResults) // Search results
 
       mockFetch.mockResolvedValue({
         ok: true,
@@ -214,7 +234,7 @@ describe('Knowledge Search API Route', () => {
       })
 
       const req = createMockRequest('POST', workflowData)
-      const { POST } = await import('./route')
+      const { POST } = await import('@/app/api/knowledge/search/route')
       const response = await POST(req)
       const data = await response.json()
 
@@ -227,7 +247,7 @@ describe('Knowledge Search API Route', () => {
       mockGetUserId.mockResolvedValue(null)
 
       const req = createMockRequest('POST', validSearchData)
-      const { POST } = await import('./route')
+      const { POST } = await import('@/app/api/knowledge/search/route')
       const response = await POST(req)
       const data = await response.json()
 
@@ -244,7 +264,7 @@ describe('Knowledge Search API Route', () => {
       mockGetUserId.mockResolvedValue(null)
 
       const req = createMockRequest('POST', workflowData)
-      const { POST } = await import('./route')
+      const { POST } = await import('@/app/api/knowledge/search/route')
       const response = await POST(req)
       const data = await response.json()
 
@@ -255,10 +275,14 @@ describe('Knowledge Search API Route', () => {
     it('should return not found for non-existent knowledge base', async () => {
       mockGetUserId.mockResolvedValue('user-123')
 
-      mockDbChain.where.mockResolvedValueOnce([]) // No knowledge bases found
+      // Mock knowledge base access check to return no access
+      mockCheckKnowledgeBaseAccess.mockResolvedValue({
+        hasAccess: false,
+        notFound: true,
+      })
 
       const req = createMockRequest('POST', validSearchData)
-      const { POST } = await import('./route')
+      const { POST } = await import('@/app/api/knowledge/search/route')
       const response = await POST(req)
       const data = await response.json()
 
@@ -274,15 +298,18 @@ describe('Knowledge Search API Route', () => {
 
       mockGetUserId.mockResolvedValue('user-123')
 
-      mockDbChain.where.mockResolvedValueOnce(mockKnowledgeBases) // Only kb-123 found
+      // Mock access check: first KB has access, second doesn't
+      mockCheckKnowledgeBaseAccess
+        .mockResolvedValueOnce({ hasAccess: true, knowledgeBase: mockKnowledgeBases[0] })
+        .mockResolvedValueOnce({ hasAccess: false, notFound: true })
 
       const req = createMockRequest('POST', multiKbData)
-      const { POST } = await import('./route')
+      const { POST } = await import('@/app/api/knowledge/search/route')
       const response = await POST(req)
       const data = await response.json()
 
       expect(response.status).toBe(404)
-      expect(data.error).toBe('Knowledge bases not found: kb-missing')
+      expect(data.error).toBe('Knowledge bases not found or access denied: kb-missing')
     })
 
     it.concurrent('should validate search parameters', async () => {
@@ -293,7 +320,7 @@ describe('Knowledge Search API Route', () => {
       }
 
       const req = createMockRequest('POST', invalidData)
-      const { POST } = await import('./route')
+      const { POST } = await import('@/app/api/knowledge/search/route')
       const response = await POST(req)
       const data = await response.json()
 
@@ -310,9 +337,13 @@ describe('Knowledge Search API Route', () => {
 
       mockGetUserId.mockResolvedValue('user-123')
 
-      mockDbChain.where.mockResolvedValueOnce(mockKnowledgeBases) // First call: get knowledge bases
+      // Mock knowledge base access check to return success
+      mockCheckKnowledgeBaseAccess.mockResolvedValue({
+        hasAccess: true,
+        knowledgeBase: mockKnowledgeBases[0],
+      })
 
-      mockDbChain.limit.mockResolvedValueOnce(mockSearchResults) // Second call: search results
+      mockDbChain.limit.mockResolvedValueOnce(mockSearchResults) // Search results
 
       mockFetch.mockResolvedValue({
         ok: true,
@@ -323,7 +354,7 @@ describe('Knowledge Search API Route', () => {
       })
 
       const req = createMockRequest('POST', dataWithoutTopK)
-      const { POST } = await import('./route')
+      const { POST } = await import('@/app/api/knowledge/search/route')
       const response = await POST(req)
       const data = await response.json()
 
@@ -343,7 +374,7 @@ describe('Knowledge Search API Route', () => {
       })
 
       const req = createMockRequest('POST', validSearchData)
-      const { POST } = await import('./route')
+      const { POST } = await import('@/app/api/knowledge/search/route')
       const response = await POST(req)
       const data = await response.json()
 
@@ -362,7 +393,7 @@ describe('Knowledge Search API Route', () => {
       mockDbChain.limit.mockResolvedValueOnce(mockKnowledgeBases)
 
       const req = createMockRequest('POST', validSearchData)
-      const { POST } = await import('./route')
+      const { POST } = await import('@/app/api/knowledge/search/route')
       const response = await POST(req)
       const data = await response.json()
 
@@ -384,7 +415,7 @@ describe('Knowledge Search API Route', () => {
       })
 
       const req = createMockRequest('POST', validSearchData)
-      const { POST } = await import('./route')
+      const { POST } = await import('@/app/api/knowledge/search/route')
       const response = await POST(req)
       const data = await response.json()
 
@@ -405,7 +436,7 @@ describe('Knowledge Search API Route', () => {
       })
 
       const req = createMockRequest('POST', validSearchData)
-      const { POST } = await import('./route')
+      const { POST } = await import('@/app/api/knowledge/search/route')
       const response = await POST(req)
       const data = await response.json()
 
@@ -416,7 +447,13 @@ describe('Knowledge Search API Route', () => {
     describe('Cost tracking', () => {
       it.concurrent('should include cost information in successful search response', async () => {
         mockGetUserId.mockResolvedValue('user-123')
-        mockDbChain.where.mockResolvedValueOnce(mockKnowledgeBases)
+
+        // Mock knowledge base access check to return success
+        mockCheckKnowledgeBaseAccess.mockResolvedValue({
+          hasAccess: true,
+          knowledgeBase: mockKnowledgeBases[0],
+        })
+
         mockDbChain.limit.mockResolvedValueOnce(mockSearchResults)
 
         mockFetch.mockResolvedValue({
@@ -428,7 +465,7 @@ describe('Knowledge Search API Route', () => {
         })
 
         const req = createMockRequest('POST', validSearchData)
-        const { POST } = await import('./route')
+        const { POST } = await import('@/app/api/knowledge/search/route')
         const response = await POST(req)
         const data = await response.json()
 
@@ -458,7 +495,13 @@ describe('Knowledge Search API Route', () => {
         const { calculateCost } = await import('@/providers/utils')
 
         mockGetUserId.mockResolvedValue('user-123')
-        mockDbChain.where.mockResolvedValueOnce(mockKnowledgeBases)
+
+        // Mock knowledge base access check to return success
+        mockCheckKnowledgeBaseAccess.mockResolvedValue({
+          hasAccess: true,
+          knowledgeBase: mockKnowledgeBases[0],
+        })
+
         mockDbChain.limit.mockResolvedValueOnce(mockSearchResults)
 
         mockFetch.mockResolvedValue({
@@ -470,7 +513,7 @@ describe('Knowledge Search API Route', () => {
         })
 
         const req = createMockRequest('POST', validSearchData)
-        const { POST } = await import('./route')
+        const { POST } = await import('@/app/api/knowledge/search/route')
         await POST(req)
 
         // Verify token estimation was called with correct parameters
@@ -509,7 +552,13 @@ describe('Knowledge Search API Route', () => {
         }
 
         mockGetUserId.mockResolvedValue('user-123')
-        mockDbChain.where.mockResolvedValueOnce(mockKnowledgeBases)
+
+        // Mock knowledge base access check to return success
+        mockCheckKnowledgeBaseAccess.mockResolvedValue({
+          hasAccess: true,
+          knowledgeBase: mockKnowledgeBases[0],
+        })
+
         mockDbChain.limit.mockResolvedValueOnce(mockSearchResults)
 
         mockFetch.mockResolvedValue({
@@ -521,7 +570,7 @@ describe('Knowledge Search API Route', () => {
         })
 
         const req = createMockRequest('POST', longQueryData)
-        const { POST } = await import('./route')
+        const { POST } = await import('@/app/api/knowledge/search/route')
         const response = await POST(req)
         const data = await response.json()
 

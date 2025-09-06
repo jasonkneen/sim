@@ -2,11 +2,13 @@ import crypto from 'crypto'
 import { type NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getSession } from '@/lib/auth'
-import { createLogger } from '@/lib/logs/console-logger'
+import { createLogger } from '@/lib/logs/console/logger'
 import { db } from '@/db'
 import { workflow, workflowBlocks } from '@/db/schema'
 
 const logger = createLogger('WorkflowAPI')
+
+export const dynamic = 'force-dynamic'
 
 // Schema for workflow creation
 const CreateWorkflowSchema = z.object({

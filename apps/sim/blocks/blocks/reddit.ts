@@ -1,20 +1,14 @@
 import { RedditIcon } from '@/components/icons'
-import type {
-  RedditCommentsResponse,
-  RedditHotPostsResponse,
-  RedditPostsResponse,
-} from '@/tools/reddit/types'
-import type { BlockConfig } from '../types'
+import type { BlockConfig } from '@/blocks/types'
+import type { RedditResponse } from '@/tools/reddit/types'
 
-export const RedditBlock: BlockConfig<
-  RedditHotPostsResponse | RedditPostsResponse | RedditCommentsResponse
-> = {
+export const RedditBlock: BlockConfig<RedditResponse> = {
   type: 'reddit',
   name: 'Reddit',
   description: 'Access Reddit data and content',
   longDescription:
     'Access Reddit data to retrieve posts and comments from any subreddit. Get post titles, content, authors, scores, comments and more.',
-  docsLink: 'https://docs.simstudio.ai/tools/reddit',
+  docsLink: 'https://docs.sim.ai/tools/reddit',
   category: 'tools',
   bgColor: '#FF5700',
   icon: RedditIcon,
@@ -29,6 +23,7 @@ export const RedditBlock: BlockConfig<
         { label: 'Get Posts', id: 'get_posts' },
         { label: 'Get Comments', id: 'get_comments' },
       ],
+      value: () => 'get_posts',
     },
 
     // Reddit OAuth Authentication
@@ -41,6 +36,7 @@ export const RedditBlock: BlockConfig<
       serviceId: 'reddit',
       requiredScopes: ['identity', 'read'],
       placeholder: 'Select Reddit account',
+      required: true,
     },
 
     // Common fields - appear for all actions
@@ -54,6 +50,7 @@ export const RedditBlock: BlockConfig<
         field: 'operation',
         value: ['get_posts', 'get_comments'],
       },
+      required: true,
     },
 
     // Get Posts specific fields
@@ -72,6 +69,7 @@ export const RedditBlock: BlockConfig<
         field: 'operation',
         value: 'get_posts',
       },
+      required: true,
     },
     {
       id: 'time',
@@ -117,6 +115,7 @@ export const RedditBlock: BlockConfig<
         field: 'operation',
         value: 'get_comments',
       },
+      required: true,
     },
     {
       id: 'commentSort',
@@ -186,20 +185,20 @@ export const RedditBlock: BlockConfig<
     },
   },
   inputs: {
-    operation: { type: 'string', required: true },
-    credential: { type: 'string', required: true },
-    subreddit: { type: 'string', required: true },
-    sort: { type: 'string', required: true },
-    time: { type: 'string', required: false },
-    limit: { type: 'number', required: false },
-    postId: { type: 'string', required: true },
-    commentSort: { type: 'string', required: false },
-    commentLimit: { type: 'number', required: false },
+    operation: { type: 'string', description: 'Operation to perform' },
+    credential: { type: 'string', description: 'Reddit access token' },
+    subreddit: { type: 'string', description: 'Subreddit name' },
+    sort: { type: 'string', description: 'Sort order' },
+    time: { type: 'string', description: 'Time filter' },
+    limit: { type: 'number', description: 'Maximum posts' },
+    postId: { type: 'string', description: 'Post identifier' },
+    commentSort: { type: 'string', description: 'Comment sort order' },
+    commentLimit: { type: 'number', description: 'Maximum comments' },
   },
   outputs: {
-    subreddit: 'string',
-    posts: 'json',
-    post: 'json',
-    comments: 'json',
+    subreddit: { type: 'string', description: 'Subreddit name' },
+    posts: { type: 'json', description: 'Posts data' },
+    post: { type: 'json', description: 'Single post data' },
+    comments: { type: 'json', description: 'Comments data' },
   },
 }

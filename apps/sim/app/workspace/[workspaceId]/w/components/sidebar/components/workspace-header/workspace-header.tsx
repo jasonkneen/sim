@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useSession } from '@/lib/auth-client'
-import { createLogger } from '@/lib/logs/console-logger'
+import { createLogger } from '@/lib/logs/console/logger'
+import { useUserPermissionsContext } from '@/app/workspace/[workspaceId]/components/providers/workspace-permissions-provider'
 
 const logger = createLogger('WorkspaceHeader')
 
@@ -29,6 +30,7 @@ interface WorkspaceHeaderProps {
   onCreateWorkflow: () => void
   isWorkspaceSelectorVisible: boolean
   onToggleWorkspaceSelector: () => void
+  onToggleSidebar: () => void
   activeWorkspace: Workspace | null
   isWorkspacesLoading: boolean
   updateWorkspaceName: (workspaceId: string, newName: string) => Promise<boolean>
@@ -42,12 +44,14 @@ export const WorkspaceHeader = React.memo<WorkspaceHeaderProps>(
     onCreateWorkflow,
     isWorkspaceSelectorVisible,
     onToggleWorkspaceSelector,
+    onToggleSidebar,
     activeWorkspace,
     isWorkspacesLoading,
     updateWorkspaceName,
   }) => {
     // External hooks
     const { data: sessionData } = useSession()
+    const userPermissions = useUserPermissionsContext()
     const [isClientLoading, setIsClientLoading] = useState(true)
     const [isEditingName, setIsEditingName] = useState(false)
     const [editingName, setEditingName] = useState('')
@@ -83,17 +87,15 @@ export const WorkspaceHeader = React.memo<WorkspaceHeaderProps>(
       }
     }, [isEditingName])
 
-    // Handle toggle sidebar
-    const handleToggleSidebar = useCallback(() => {
-      // This will be implemented when needed - placeholder for now
-      logger.info('Toggle sidebar clicked')
-    }, [])
-
     // Handle workspace name click
     const handleWorkspaceNameClick = useCallback(() => {
+      // Only allow admins to rename workspace
+      if (!userPermissions.canAdmin) {
+        return
+      }
       setEditingName(displayName)
       setIsEditingName(true)
-    }, [displayName])
+    }, [displayName, userPermissions.canAdmin])
 
     // Handle workspace name editing actions
     const handleEditingAction = useCallback(
@@ -102,8 +104,9 @@ export const WorkspaceHeader = React.memo<WorkspaceHeaderProps>(
           case 'save': {
             // Exit edit mode immediately, save in background
             setIsEditingName(false)
-            if (activeWorkspace && editingName.trim() !== '') {
-              updateWorkspaceName(activeWorkspace.id, editingName.trim()).catch((error) => {
+            const trimmedName = editingName.trim()
+            if (activeWorkspace && trimmedName !== '' && trimmedName !== activeWorkspace.name) {
+              updateWorkspaceName(activeWorkspace.id, trimmedName).catch((error) => {
                 logger.error('Failed to update workspace name:', error)
               })
             }
@@ -211,16 +214,29 @@ export const WorkspaceHeader = React.memo<WorkspaceHeaderProps>(
                 }}
               />
             ) : (
-              <div
-                onClick={handleWorkspaceNameClick}
-                className='cursor-pointer truncate font-medium text-sm leading-none transition-all hover:brightness-75 dark:hover:brightness-125'
-                style={{
-                  minHeight: '1rem',
-                  lineHeight: '1rem',
-                }}
-              >
-                {displayName}
-              </div>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div
+                    onClick={handleWorkspaceNameClick}
+                    className={`truncate font-medium text-sm leading-none transition-all ${
+                      userPermissions.canAdmin
+                        ? 'cursor-pointer hover:brightness-75 dark:hover:brightness-125'
+                        : 'cursor-default'
+                    }`}
+                    style={{
+                      minHeight: '1rem',
+                      lineHeight: '1rem',
+                    }}
+                  >
+                    {displayName}
+                  </div>
+                </TooltipTrigger>
+                {!userPermissions.canAdmin && (
+                  <TooltipContent side='bottom'>
+                    Admin permissions required to rename workspace
+                  </TooltipContent>
+                )}
+              </Tooltip>
             )}
           </div>
 
@@ -248,7 +264,7 @@ export const WorkspaceHeader = React.memo<WorkspaceHeaderProps>(
               <Button
                 variant='ghost'
                 size='icon'
-                onClick={handleToggleSidebar}
+                onClick={onToggleSidebar}
                 className='h-6 w-6 text-muted-foreground hover:bg-secondary'
               >
                 <PanelLeft className='h-4 w-4' />

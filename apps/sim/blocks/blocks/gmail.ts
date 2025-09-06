@@ -1,6 +1,6 @@
 import { GmailIcon } from '@/components/icons'
+import type { BlockConfig } from '@/blocks/types'
 import type { GmailToolResponse } from '@/tools/gmail/types'
-import type { BlockConfig } from '../types'
 
 export const GmailBlock: BlockConfig<GmailToolResponse> = {
   type: 'gmail',
@@ -8,7 +8,7 @@ export const GmailBlock: BlockConfig<GmailToolResponse> = {
   description: 'Send Gmail',
   longDescription:
     'Integrate Gmail functionality to send email messages within your workflow. Automate email communications and process email content using OAuth authentication.',
-  docsLink: 'https://docs.simstudio.ai/tools/gmail',
+  docsLink: 'https://docs.sim.ai/tools/gmail',
   category: 'tools',
   bgColor: '#E0E0E0',
   icon: GmailIcon,
@@ -25,6 +25,7 @@ export const GmailBlock: BlockConfig<GmailToolResponse> = {
         { label: 'Draft Email', id: 'draft_gmail' },
         { label: 'Search Email', id: 'search_gmail' },
       ],
+      value: () => 'send_gmail',
     },
     // Gmail Credentials
     {
@@ -41,6 +42,7 @@ export const GmailBlock: BlockConfig<GmailToolResponse> = {
         'https://www.googleapis.com/auth/gmail.labels',
       ],
       placeholder: 'Select Gmail account',
+      required: true,
     },
     // Send Email Fields
     {
@@ -50,6 +52,7 @@ export const GmailBlock: BlockConfig<GmailToolResponse> = {
       layout: 'full',
       placeholder: 'Recipient email address',
       condition: { field: 'operation', value: ['send_gmail', 'draft_gmail'] },
+      required: true,
     },
     {
       id: 'subject',
@@ -58,6 +61,7 @@ export const GmailBlock: BlockConfig<GmailToolResponse> = {
       layout: 'full',
       placeholder: 'Email subject',
       condition: { field: 'operation', value: ['send_gmail', 'draft_gmail'] },
+      required: true,
     },
     {
       id: 'body',
@@ -66,8 +70,9 @@ export const GmailBlock: BlockConfig<GmailToolResponse> = {
       layout: 'full',
       placeholder: 'Email content',
       condition: { field: 'operation', value: ['send_gmail', 'draft_gmail'] },
+      required: true,
     },
-    // Read Email Fields - Add folder selector
+    // Label/folder selector (basic mode)
     {
       id: 'folder',
       title: 'Label',
@@ -80,6 +85,17 @@ export const GmailBlock: BlockConfig<GmailToolResponse> = {
         'https://www.googleapis.com/auth/gmail.labels',
       ],
       placeholder: 'Select Gmail label/folder',
+      mode: 'basic',
+      condition: { field: 'operation', value: 'read_gmail' },
+    },
+    // Manual label/folder input (advanced mode)
+    {
+      id: 'manualFolder',
+      title: 'Label/Folder',
+      type: 'short-input',
+      layout: 'full',
+      placeholder: 'Enter Gmail label name (e.g., INBOX, SENT, or custom label)',
+      mode: 'advanced',
       condition: { field: 'operation', value: 'read_gmail' },
     },
     {
@@ -112,6 +128,7 @@ export const GmailBlock: BlockConfig<GmailToolResponse> = {
       layout: 'full',
       placeholder: 'Enter search terms',
       condition: { field: 'operation', value: 'search_gmail' },
+      required: true,
     },
     {
       id: 'maxResults',
@@ -141,11 +158,14 @@ export const GmailBlock: BlockConfig<GmailToolResponse> = {
       },
       params: (params) => {
         // Pass the credential directly from the credential field
-        const { credential, ...rest } = params
+        const { credential, folder, manualFolder, ...rest } = params
+
+        // Handle folder input (selector or manual)
+        const effectiveFolder = (folder || manualFolder || '').trim()
 
         // Ensure folder is always provided for read_gmail operation
         if (rest.operation === 'read_gmail') {
-          rest.folder = rest.folder || 'INBOX'
+          rest.folder = effectiveFolder || 'INBOX'
         }
 
         return {
@@ -156,22 +176,23 @@ export const GmailBlock: BlockConfig<GmailToolResponse> = {
     },
   },
   inputs: {
-    operation: { type: 'string', required: true },
-    credential: { type: 'string', required: true },
+    operation: { type: 'string', description: 'Operation to perform' },
+    credential: { type: 'string', description: 'Gmail access token' },
     // Send operation inputs
-    to: { type: 'string', required: false },
-    subject: { type: 'string', required: false },
-    body: { type: 'string', required: false },
+    to: { type: 'string', description: 'Recipient email address' },
+    subject: { type: 'string', description: 'Email subject' },
+    body: { type: 'string', description: 'Email content' },
     // Read operation inputs
-    folder: { type: 'string', required: false },
-    messageId: { type: 'string', required: false },
-    unreadOnly: { type: 'boolean', required: false },
+    folder: { type: 'string', description: 'Gmail folder' },
+    manualFolder: { type: 'string', description: 'Manual folder name' },
+    messageId: { type: 'string', description: 'Message identifier' },
+    unreadOnly: { type: 'boolean', description: 'Unread messages only' },
     // Search operation inputs
-    query: { type: 'string', required: false },
-    maxResults: { type: 'number', required: false },
+    query: { type: 'string', description: 'Search query' },
+    maxResults: { type: 'number', description: 'Maximum results' },
   },
   outputs: {
-    content: 'string',
-    metadata: 'json',
+    content: { type: 'string', description: 'Response content' },
+    metadata: { type: 'json', description: 'Email metadata' },
   },
 }

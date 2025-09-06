@@ -1,8 +1,6 @@
 import { ConfluenceIcon } from '@/components/icons'
-import type { ConfluenceRetrieveResponse, ConfluenceUpdateResponse } from '@/tools/confluence/types'
-import type { BlockConfig } from '../types'
-
-type ConfluenceResponse = ConfluenceRetrieveResponse | ConfluenceUpdateResponse
+import type { BlockConfig } from '@/blocks/types'
+import type { ConfluenceResponse } from '@/tools/confluence/types'
 
 export const ConfluenceBlock: BlockConfig<ConfluenceResponse> = {
   type: 'confluence',
@@ -10,7 +8,7 @@ export const ConfluenceBlock: BlockConfig<ConfluenceResponse> = {
   description: 'Interact with Confluence',
   longDescription:
     'Connect to Confluence workspaces to retrieve and search documentation. Access page content, metadata, and integrate Confluence documentation into your workflows.',
-  docsLink: 'https://docs.simstudio.ai/tools/confluence',
+  docsLink: 'https://docs.sim.ai/tools/confluence',
   category: 'tools',
   bgColor: '#E0E0E0',
   icon: ConfluenceIcon,
@@ -25,6 +23,7 @@ export const ConfluenceBlock: BlockConfig<ConfluenceResponse> = {
         { label: 'Read Page', id: 'read' },
         { label: 'Update Page', id: 'update' },
       ],
+      value: () => 'read',
     },
     {
       id: 'domain',
@@ -32,6 +31,7 @@ export const ConfluenceBlock: BlockConfig<ConfluenceResponse> = {
       type: 'short-input',
       layout: 'full',
       placeholder: 'Enter Confluence domain (e.g., simstudio.atlassian.net)',
+      required: true,
     },
     {
       id: 'credential',
@@ -47,8 +47,9 @@ export const ConfluenceBlock: BlockConfig<ConfluenceResponse> = {
         'offline_access',
       ],
       placeholder: 'Select Confluence account',
+      required: true,
     },
-    // Use file-selector component for page selection
+    // Page selector (basic mode)
     {
       id: 'pageId',
       title: 'Select Page',
@@ -57,6 +58,16 @@ export const ConfluenceBlock: BlockConfig<ConfluenceResponse> = {
       provider: 'confluence',
       serviceId: 'confluence',
       placeholder: 'Select Confluence page',
+      mode: 'basic',
+    },
+    // Manual page ID input (advanced mode)
+    {
+      id: 'manualPageId',
+      title: 'Page ID',
+      type: 'short-input',
+      layout: 'full',
+      placeholder: 'Enter Confluence page ID',
+      mode: 'advanced',
     },
     // Update page fields
     {
@@ -90,29 +101,38 @@ export const ConfluenceBlock: BlockConfig<ConfluenceResponse> = {
         }
       },
       params: (params) => {
-        const { credential, ...rest } = params
+        const { credential, pageId, manualPageId, ...rest } = params
+
+        // Use the selected page ID or the manually entered one
+        const effectivePageId = (pageId || manualPageId || '').trim()
+
+        if (!effectivePageId) {
+          throw new Error('Page ID is required. Please select a page or enter a page ID manually.')
+        }
 
         return {
           accessToken: credential,
+          pageId: effectivePageId,
           ...rest,
         }
       },
     },
   },
   inputs: {
-    operation: { type: 'string', required: true },
-    domain: { type: 'string', required: true },
-    credential: { type: 'string', required: true },
-    pageId: { type: 'string', required: true },
+    operation: { type: 'string', description: 'Operation to perform' },
+    domain: { type: 'string', description: 'Confluence domain' },
+    credential: { type: 'string', description: 'Confluence access token' },
+    pageId: { type: 'string', description: 'Page identifier' },
+    manualPageId: { type: 'string', description: 'Manual page identifier' },
     // Update operation inputs
-    title: { type: 'string', required: false },
-    content: { type: 'string', required: false },
+    title: { type: 'string', description: 'New page title' },
+    content: { type: 'string', description: 'New page content' },
   },
   outputs: {
-    ts: 'string',
-    pageId: 'string',
-    content: 'string',
-    title: 'string',
-    success: 'boolean',
+    ts: { type: 'string', description: 'Timestamp' },
+    pageId: { type: 'string', description: 'Page identifier' },
+    content: { type: 'string', description: 'Page content' },
+    title: { type: 'string', description: 'Page title' },
+    success: { type: 'boolean', description: 'Operation success status' },
   },
 }

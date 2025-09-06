@@ -1,33 +1,33 @@
 <p align="center">
-  <img src="apps/sim/public/static/sim.png" alt="Sim Studio Logo" width="500"/>
+  <img src="apps/sim/public/static/sim.png" alt="Sim Logo" width="500"/>
 </p>
 
 <p align="center">
   <a href="https://www.apache.org/licenses/LICENSE-2.0"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License: Apache-2.0"></a>
   <a href="https://discord.gg/Hr4UWYEcTT"><img src="https://img.shields.io/badge/Discord-Join%20Server-7289DA?logo=discord&logoColor=white" alt="Discord"></a>
-  <a href="https://x.com/simstudioai"><img src="https://img.shields.io/twitter/follow/simstudioai?style=social" alt="Twitter"></a>
+  <a href="https://x.com/simdotai"><img src="https://img.shields.io/twitter/follow/simstudioai?style=social" alt="Twitter"></a>
   <a href="https://github.com/simstudioai/sim/pulls"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs welcome"></a>
-  <a href="https://docs.simstudio.ai"><img src="https://img.shields.io/badge/Docs-visit%20documentation-blue.svg" alt="Documentation"></a>
+  <a href="https://docs.sim.ai"><img src="https://img.shields.io/badge/Docs-visit%20documentation-blue.svg" alt="Documentation"></a>
 </p>
 
 <p align="center">
-  <strong>Sim Studio</strong> is a lightweight, user-friendly platform for building AI agent workflows.
+  <strong>Sim</strong> is a lightweight, user-friendly platform for building AI agent workflows.
 </p>
 
 <p align="center">
-  <img src="apps/sim/public/static/demo.gif" alt="Sim Studio Demo" width="800"/>
+  <img src="apps/sim/public/static/demo.gif" alt="Sim Demo" width="800"/>
 </p>
 
 ## Getting Started
 
-1. Use our [cloud-hosted version](https://simstudio.ai)
+1. Use our [cloud-hosted version](https://sim.ai)
 2. Self-host using one of the methods below
 
 ## Self-Hosting Options
 
 ### Option 1: NPM Package (Simplest)
 
-The easiest way to run Sim Studio locally is using our [NPM package](https://www.npmjs.com/package/simstudio?activeTab=readme):
+The easiest way to run Sim locally is using our [NPM package](https://www.npmjs.com/package/simstudio?activeTab=readme):
 
 ```bash
 npx simstudio
@@ -37,7 +37,7 @@ After running these commands, open [http://localhost:3000/](http://localhost:300
 
 #### Options
 
-- `-p, --port <port>`: Specify the port to run Sim Studio on (default: 3000)
+- `-p, --port <port>`: Specify the port to run Sim on (default: 3000)
 - `--no-pull`: Skip pulling the latest Docker images
 
 #### Requirements
@@ -53,7 +53,7 @@ git clone https://github.com/simstudioai/sim.git
 # Navigate to the project directory
 cd sim
 
-# Start Sim Studio
+# Start Sim
 docker compose -f docker-compose.prod.yml up -d
 ```
 
@@ -61,7 +61,7 @@ Access the application at [http://localhost:3000/](http://localhost:3000/)
 
 #### Using Local Models
 
-To use local models with Sim Studio:
+To use local models with Sim:
 
 1. Pull models using our helper script:
 
@@ -69,7 +69,7 @@ To use local models with Sim Studio:
 ./apps/sim/scripts/ollama_docker.sh pull <model_name>
 ```
 
-2. Start Sim Studio with local model support:
+2. Start Sim with local model support:
 
 ```bash
 # With NVIDIA GPU support
@@ -91,6 +91,12 @@ docker compose -f docker-compose.prod.yml up -d
 
 ### Option 4: Manual Setup
 
+**Requirements:**
+- [Bun](https://bun.sh/) runtime
+- PostgreSQL 12+ with [pgvector extension](https://github.com/pgvector/pgvector) (required for AI embeddings)
+
+**Note:** Sim uses vector embeddings for AI features like knowledge bases and semantic search, which requires the `pgvector` PostgreSQL extension.
+
 1. Clone and install dependencies:
 
 ```bash
@@ -99,20 +105,43 @@ cd sim
 bun install
 ```
 
-2. Set up environment:
+2. Set up PostgreSQL with pgvector:
+
+You need PostgreSQL with the `vector` extension for embedding support. Choose one option:
+
+**Option A: Using Docker (Recommended)**
+```bash
+# Start PostgreSQL with pgvector extension
+docker run --name simstudio-db \
+  -e POSTGRES_PASSWORD=your_password \
+  -e POSTGRES_DB=simstudio \
+  -p 5432:5432 -d \
+  pgvector/pgvector:pg17
+```
+
+**Option B: Manual Installation**
+- Install PostgreSQL 12+ and the pgvector extension
+- See [pgvector installation guide](https://github.com/pgvector/pgvector#installation)
+
+3. Set up environment:
 
 ```bash
 cd apps/sim
 cp .env.example .env  # Configure with required variables (DATABASE_URL, BETTER_AUTH_SECRET, BETTER_AUTH_URL)
 ```
 
-3. Set up the database:
-
+Update your `.env` file with the database URL:
 ```bash
-bunx drizzle-kit push
+DATABASE_URL="postgresql://postgres:your_password@localhost:5432/simstudio"
 ```
 
-4. Start the development servers:
+4. Set up the database:
+
+```bash
+bunx drizzle-kit migrate 
+```
+
+5. Start the development servers:
 
 **Recommended approach - run both servers together (from project root):**
 
@@ -147,6 +176,7 @@ bun run dev:sockets
 - **Docs**: [Fumadocs](https://fumadocs.vercel.app/)
 - **Monorepo**: [Turborepo](https://turborepo.org/)
 - **Realtime**: [Socket.io](https://socket.io/)
+- **Background Jobs**: [Trigger.dev](https://trigger.dev/)
 
 ## Contributing
 
@@ -156,4 +186,4 @@ We welcome contributions! Please see our [Contributing Guide](.github/CONTRIBUTI
 
 This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
 
-<p align="center">Made with ❤️ by the Sim Studio Team</p>
+<p align="center">Made with ❤️ by the Sim Team</p>

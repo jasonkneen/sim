@@ -47,12 +47,12 @@ import {
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { createLogger } from '@/lib/logs/console-logger'
+import { createLogger } from '@/lib/logs/console/logger'
 import { cn } from '@/lib/utils'
+import type { Template } from '@/app/workspace/[workspaceId]/templates/templates'
+import { categories } from '@/app/workspace/[workspaceId]/templates/templates'
 import { WorkflowPreview } from '@/app/workspace/[workspaceId]/w/components/workflow-preview/workflow-preview'
 import type { WorkflowState } from '@/stores/workflows/workflow/types'
-import type { Template } from '../templates'
-import { categories } from '../templates'
 
 const logger = createLogger('TemplateDetails')
 
@@ -143,7 +143,7 @@ export default function TemplateDetails({
   const renderWorkflowPreview = () => {
     // Follow the same pattern as deployed-workflow-card.tsx
     if (!template?.state) {
-      console.log('Template has no state:', template)
+      logger.info('Template has no state:', template)
       return (
         <div className='flex h-full items-center justify-center text-center'>
           <div className='text-muted-foreground'>
@@ -154,10 +154,10 @@ export default function TemplateDetails({
       )
     }
 
-    console.log('Template state:', template.state)
-    console.log('Template state type:', typeof template.state)
-    console.log('Template state blocks:', template.state.blocks)
-    console.log('Template state edges:', template.state.edges)
+    logger.info('Template state:', template.state)
+    logger.info('Template state type:', typeof template.state)
+    logger.info('Template state blocks:', template.state.blocks)
+    logger.info('Template state edges:', template.state.edges)
 
     try {
       return (

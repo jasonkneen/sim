@@ -1,6 +1,6 @@
 import { ImageIcon } from '@/components/icons'
+import type { BlockConfig } from '@/blocks/types'
 import type { DalleResponse } from '@/tools/openai/types'
-import type { BlockConfig } from '../types'
 
 export const ImageGeneratorBlock: BlockConfig<DalleResponse> = {
   type: 'image_generator',
@@ -8,7 +8,7 @@ export const ImageGeneratorBlock: BlockConfig<DalleResponse> = {
   description: 'Generate images',
   longDescription:
     "Create high-quality images using OpenAI's image generation models. Configure resolution, quality, style, and other parameters to get exactly the image you need.",
-  docsLink: 'https://docs.simstudio.ai/tools/image_generator',
+  docsLink: 'https://docs.sim.ai/tools/image_generator',
   category: 'tools',
   bgColor: '#4D5FFF',
   icon: ImageIcon,
@@ -29,6 +29,7 @@ export const ImageGeneratorBlock: BlockConfig<DalleResponse> = {
       title: 'Prompt',
       type: 'long-input',
       layout: 'full',
+      required: true,
       placeholder: 'Describe the image you want to generate...',
     },
     {
@@ -100,6 +101,7 @@ export const ImageGeneratorBlock: BlockConfig<DalleResponse> = {
       title: 'API Key',
       type: 'short-input',
       layout: 'full',
+      required: true,
       placeholder: 'Enter your OpenAI API key',
       password: true,
       connectionDroppable: false,
@@ -144,17 +146,17 @@ export const ImageGeneratorBlock: BlockConfig<DalleResponse> = {
     },
   },
   inputs: {
-    prompt: { type: 'string', required: true },
-    model: { type: 'string', required: true },
-    size: { type: 'string', required: false },
-    quality: { type: 'string', required: false },
-    style: { type: 'string', required: false },
-    background: { type: 'string', required: false },
-    apiKey: { type: 'string', required: true },
+    prompt: { type: 'string', description: 'Image description prompt' },
+    model: { type: 'string', description: 'Image generation model' },
+    size: { type: 'string', description: 'Image dimensions' },
+    quality: { type: 'string', description: 'Image quality level' },
+    style: { type: 'string', description: 'Image style' },
+    background: { type: 'string', description: 'Background type' },
+    apiKey: { type: 'string', description: 'OpenAI API key' },
   },
   outputs: {
-    content: 'string',
-    image: 'string',
-    metadata: 'json',
+    content: { type: 'string', description: 'Generation response' },
+    image: { type: 'string', description: 'Generated image URL' },
+    metadata: { type: 'json', description: 'Generation metadata' },
   },
 }

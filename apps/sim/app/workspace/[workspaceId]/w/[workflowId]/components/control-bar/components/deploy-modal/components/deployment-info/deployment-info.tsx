@@ -12,25 +12,30 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from '@/components/ui/alert-dialog'
-import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
-import { ApiEndpoint } from '@/app/workspace/[workspaceId]/w/[workflowId]/components/control-bar/components/deploy-modal/components/deployment-info/components/api-endpoint/api-endpoint'
-import { ApiKey } from '@/app/workspace/[workspaceId]/w/[workflowId]/components/control-bar/components/deploy-modal/components/deployment-info/components/api-key/api-key'
-import { DeployStatus } from '@/app/workspace/[workspaceId]/w/[workflowId]/components/control-bar/components/deploy-modal/components/deployment-info/components/deploy-status/deploy-status'
-import { ExampleCommand } from '@/app/workspace/[workspaceId]/w/[workflowId]/components/control-bar/components/deploy-modal/components/deployment-info/components/example-command/example-command'
+  Button,
+  Skeleton,
+} from '@/components/ui'
+import {
+  ApiEndpoint,
+  ApiKey,
+  DeployStatus,
+  ExampleCommand,
+} from '@/app/workspace/[workspaceId]/w/[workflowId]/components/control-bar/components/deploy-modal/components/deployment-info/components'
+import { DeployedWorkflowModal } from '@/app/workspace/[workspaceId]/w/[workflowId]/components/control-bar/components/deployment-controls/components/deployed-workflow-modal'
 import type { WorkflowState } from '@/stores/workflows/workflow/types'
-import { DeployedWorkflowModal } from '../../../deployment-controls/components/deployed-workflow-modal'
+
+interface WorkflowDeploymentInfo {
+  isDeployed: boolean
+  deployedAt?: string
+  apiKey: string
+  endpoint: string
+  exampleCommand: string
+  needsRedeployment: boolean
+}
 
 interface DeploymentInfoProps {
-  isLoading?: boolean
-  deploymentInfo: {
-    deployedAt?: string
-    apiKey: string
-    endpoint: string
-    exampleCommand: string
-    needsRedeployment: boolean
-  } | null
+  isLoading: boolean
+  deploymentInfo: WorkflowDeploymentInfo | null
   onRedeploy: () => void
   onUndeploy: () => void
   isSubmitting: boolean
@@ -38,6 +43,7 @@ interface DeploymentInfoProps {
   workflowId: string | null
   deployedState: WorkflowState
   isLoadingDeployedState: boolean
+  getInputFormatExample?: () => string
 }
 
 export function DeploymentInfo({
@@ -49,6 +55,8 @@ export function DeploymentInfo({
   isUndeploying,
   workflowId,
   deployedState,
+  isLoadingDeployedState,
+  getInputFormatExample,
 }: DeploymentInfoProps) {
   const [isViewingDeployed, setIsViewingDeployed] = useState(false)
 
@@ -103,7 +111,12 @@ export function DeploymentInfo({
         <div className='space-y-4'>
           <ApiEndpoint endpoint={deploymentInfo.endpoint} />
           <ApiKey apiKey={deploymentInfo.apiKey} />
-          <ExampleCommand command={deploymentInfo.exampleCommand} apiKey={deploymentInfo.apiKey} />
+          <ExampleCommand
+            command={deploymentInfo.exampleCommand}
+            apiKey={deploymentInfo.apiKey}
+            endpoint={deploymentInfo.endpoint}
+            getInputFormatExample={getInputFormatExample}
+          />
         </div>
 
         <div className='mt-4 flex items-center justify-between pt-2'>

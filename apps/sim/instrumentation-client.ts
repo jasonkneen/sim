@@ -1,5 +1,5 @@
 /**
- * Sim Studio Telemetry - Client-side Instrumentation
+ * Sim Telemetry - Client-side Instrumentation
  *
  * This file initializes client-side telemetry when the app loads in the browser.
  * It respects the user's telemetry preferences stored in localStorage.
@@ -18,13 +18,13 @@ import {
   linkedErrorsIntegration,
   makeFetchTransport,
 } from '@sentry/nextjs'
-import { env } from './lib/env'
+import { env, getEnv } from './lib/env'
 import { isProd } from './lib/environment'
 
 // Only in production
 if (typeof window !== 'undefined' && isProd) {
   const client = new BrowserClient({
-    dsn: env.NEXT_PUBLIC_SENTRY_DSN || undefined,
+    dsn: getEnv('NEXT_PUBLIC_SENTRY_DSN') || undefined,
     environment: env.NODE_ENV || 'development',
     transport: makeFetchTransport,
     stackParser: defaultStackParser,

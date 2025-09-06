@@ -2,7 +2,7 @@ import { eq, sql } from 'drizzle-orm'
 import { type NextRequest, NextResponse } from 'next/server'
 import { v4 as uuidv4 } from 'uuid'
 import { getSession } from '@/lib/auth'
-import { createLogger } from '@/lib/logs/console-logger'
+import { createLogger } from '@/lib/logs/console/logger'
 import { db } from '@/db'
 import { templates, workflow, workflowBlocks, workflowEdges } from '@/db/schema'
 
@@ -43,6 +43,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         name: templates.name,
         description: templates.description,
         state: templates.state,
+        color: templates.color,
       })
       .from(templates)
       .where(eq(templates.id, id))
@@ -80,6 +81,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           name: `${templateData.name} (copy)`,
           description: templateData.description,
           state: templateData.state,
+          color: templateData.color,
           userId: session.user.id,
           createdAt: now,
           updatedAt: now,

@@ -1,6 +1,6 @@
 import { eq, sql } from 'drizzle-orm'
 import { type NextRequest, NextResponse } from 'next/server'
-import { createLogger } from '@/lib/logs/console-logger'
+import { createLogger } from '@/lib/logs/console/logger'
 import { db } from '@/db'
 import { userStats, workflow } from '@/db/schema'
 
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           totalChatExecutions: 0,
           totalTokensUsed: 0,
           totalCost: '0.00',
-          lastActive: new Date(),
+          lastActive: sql`now()`,
         })
       } else {
         // Update existing record

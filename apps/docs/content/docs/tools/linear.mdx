@@ -36,7 +36,7 @@ Key features of Linear include:
 - Workflow Automation: Powerful automation rules to streamline repetitive tasks and processes
 - Advanced Search: Complex filtering and reporting capabilities for efficient issue management
 
-In Sim Studio, the Linear integration allows your agents to seamlessly interact with your project management workflow. This creates opportunities for automated issue creation, updates, and tracking as part of your AI workflows. The integration enables agents to read existing issues and create new ones programmatically, facilitating automated project management tasks and ensuring that important information is properly tracked and documented. By connecting Sim Studio with Linear, you can build intelligent agents that maintain project visibility while automating routine project management tasks, enhancing team productivity and ensuring consistent project tracking.
+In Sim, the Linear integration allows your agents to seamlessly interact with your project management workflow. This creates opportunities for automated issue creation, updates, and tracking as part of your AI workflows. The integration enables agents to read existing issues and create new ones programmatically, facilitating automated project management tasks and ensuring that important information is properly tracked and documented. By connecting Sim with Linear, you can build intelligent agents that maintain project visibility while automating routine project management tasks, enhancing team productivity and ensuring consistent project tracking.
 {/* MANUAL-CONTENT-END */}
 
 
@@ -61,9 +61,10 @@ Fetch and filter issues from Linear
 
 #### Output
 
-| Parameter | Type |
-| --------- | ---- |
-| `issues` | string |
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `issues` | json | Issues list |
+| `issue` | json | Single issue data |
 
 ### `linear_create_issue`
 
@@ -80,33 +81,11 @@ Create a new issue in Linear
 
 #### Output
 
-| Parameter | Type |
-| --------- | ---- |
-| `issue` | string |
-| `title` | string |
-| `description` | string |
-| `state` | string |
-| `teamId` | string |
-| `projectId` | string |
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `issues` | json | Issues list |
+| `issue` | json | Single issue data |
 
-
-
-## Block Configuration
-
-### Input
-
-| Parameter | Type | Required | Description | 
-| --------- | ---- | -------- | ----------- | 
-| `operation` | string | Yes | Operation |
-
-
-
-### Outputs
-
-| Output | Type | Description |
-| ------ | ---- | ----------- |
-| `issues` | json | issues output from the block |
-| `issue` | json | issue output from the block |
 
 
 ## Notes

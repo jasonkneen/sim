@@ -1,5 +1,5 @@
-import type { ToolConfig } from '../types'
-import type { ConfluenceUpdateParams, ConfluenceUpdateResponse } from './types'
+import type { ConfluenceUpdateParams, ConfluenceUpdateResponse } from '@/tools/confluence/types'
+import type { ToolConfig } from '@/tools/types'
 
 export const confluenceUpdateTool: ToolConfig<ConfluenceUpdateParams, ConfluenceUpdateResponse> = {
   id: 'confluence_update',
@@ -85,7 +85,7 @@ export const confluenceUpdateTool: ToolConfig<ConfluenceUpdateParams, Confluence
           : undefined,
         version: {
           number: params.version || 1,
-          message: params.version ? 'Updated via Sim Studio' : 'Initial update via Sim Studio',
+          message: params.version ? 'Updated via Sim' : 'Initial update via Sim',
         },
       }
       return body

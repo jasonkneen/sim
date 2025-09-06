@@ -1,7 +1,8 @@
 import { getSessionCookie } from 'better-auth/cookies'
 import { type NextRequest, NextResponse } from 'next/server'
 import { isDev } from './lib/environment'
-import { createLogger } from './lib/logs/console-logger'
+import { createLogger } from './lib/logs/console/logger'
+import { generateRuntimeCSP } from './lib/security/csp'
 import { getBaseDomain } from './lib/urls/utils'
 
 const logger = createLogger('Middleware')
@@ -31,14 +32,14 @@ export async function middleware(request: NextRequest) {
       return false
     }
 
-    // Extract root domain from BASE_DOMAIN (e.g., "simstudio.ai" from "staging.simstudio.ai")
+    // Extract root domain from BASE_DOMAIN (e.g., "sim.ai" from "staging.sim.ai")
     const baseParts = BASE_DOMAIN.split('.')
     const rootDomain = isDev
       ? 'localhost'
       : baseParts.length >= 2
         ? baseParts
             .slice(-2)
-            .join('.') // Last 2 parts: ["simstudio", "ai"] -> "simstudio.ai"
+            .join('.') // Last 2 parts: ["simstudio", "ai"] -> "sim.ai"
         : BASE_DOMAIN
 
     // Check if hostname is under the same root domain
@@ -159,6 +160,16 @@ export async function middleware(request: NextRequest) {
 
   const response = NextResponse.next()
   response.headers.set('Vary', 'User-Agent')
+
+  // Generate runtime CSP for main application routes that need dynamic environment variables
+  if (
+    url.pathname.startsWith('/workspace') ||
+    url.pathname.startsWith('/chat') ||
+    url.pathname === '/'
+  ) {
+    response.headers.set('Content-Security-Policy', generateRuntimeCSP())
+  }
+
   return response
 }
 

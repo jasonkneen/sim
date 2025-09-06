@@ -1,14 +1,20 @@
-import { env } from '@/lib/env'
-import { createLogger } from '@/lib/logs/console-logger'
+import { getEnv } from '@/lib/env'
+import { createLogger } from '@/lib/logs/console/logger'
 import { getAllBlocks } from '@/blocks'
 import type { BlockOutput } from '@/blocks/types'
+import { BlockType } from '@/executor/consts'
+import type {
+  AgentInputs,
+  Message,
+  StreamingConfig,
+  ToolInput,
+} from '@/executor/handlers/agent/types'
+import type { BlockHandler, ExecutionContext, StreamingExecution } from '@/executor/types'
 import { executeProviderRequest } from '@/providers'
 import { getApiKey, getProviderFromModel, transformBlockTool } from '@/providers/utils'
 import type { SerializedBlock } from '@/serializer/types'
 import { executeTool } from '@/tools'
 import { getTool, getToolAsync } from '@/tools/utils'
-import type { BlockHandler, ExecutionContext, StreamingExecution } from '../../types'
-import type { AgentInputs, Message, StreamingConfig, ToolInput } from './types'
 
 const logger = createLogger('AgentBlockHandler')
 
@@ -22,7 +28,7 @@ const CUSTOM_TOOL_PREFIX = 'custom_'
  */
 export class AgentBlockHandler implements BlockHandler {
   canHandle(block: SerializedBlock): boolean {
-    return block.metadata?.id === 'agent'
+    return block.metadata?.id === BlockType.AGENT
   }
 
   async execute(
@@ -143,7 +149,7 @@ export class AgentBlockHandler implements BlockHandler {
     const userProvidedParams = tool.params || {}
 
     // Import the utility function
-    const { filterSchemaForLLM, mergeToolParameters } = await import('../../../tools/params')
+    const { filterSchemaForLLM, mergeToolParameters } = await import('@/tools/params')
 
     // Create schema excluding user-provided parameters
     const filteredSchema = filterSchemaForLLM(tool.schema.function.parameters, userProvidedParams)
@@ -471,7 +477,7 @@ export class AgentBlockHandler implements BlockHandler {
   ) {
     logger.info('Using HTTP provider request (browser environment)')
 
-    const url = new URL('/api/providers', env.NEXT_PUBLIC_APP_URL || '')
+    const url = new URL('/api/providers', getEnv('NEXT_PUBLIC_APP_URL') || '')
     const response = await fetch(url.toString(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

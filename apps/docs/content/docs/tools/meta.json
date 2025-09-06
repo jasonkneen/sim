@@ -2,6 +2,7 @@
   "items": [
     "index",
     "airtable",
+    "arxiv",
     "browser_use",
     "clay",
     "confluence",
@@ -18,6 +19,7 @@
     "google_search",
     "google_sheets",
     "huggingface",
+    "hunter",
     "image_generator",
     "jina",
     "jira",
@@ -34,8 +36,10 @@
     "outlook",
     "perplexity",
     "pinecone",
+    "qdrant",
     "reddit",
     "s3",
+    "schedule",
     "serper",
     "slack",
     "stagehand",
@@ -49,7 +53,9 @@
     "typeform",
     "vision",
     "wealthbox",
+    "webhook",
     "whatsapp",
+    "wikipedia",
     "x",
     "youtube"
   ]

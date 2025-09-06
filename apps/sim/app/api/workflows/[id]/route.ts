@@ -4,13 +4,15 @@ import { z } from 'zod'
 import { getSession } from '@/lib/auth'
 import { verifyInternalToken } from '@/lib/auth/internal'
 import { env } from '@/lib/env'
-import { createLogger } from '@/lib/logs/console-logger'
+import { createLogger } from '@/lib/logs/console/logger'
 import { getUserEntityPermissions, hasAdminPermission } from '@/lib/permissions/utils'
 import { loadWorkflowFromNormalizedTables } from '@/lib/workflows/db-helpers'
 import { db } from '@/db'
 import { workflow } from '@/db/schema'
 
 const logger = createLogger('WorkflowByIdAPI')
+
+export const dynamic = 'force-dynamic'
 
 const UpdateWorkflowSchema = z.object({
   name: z.string().min(1, 'Name is required').optional(),
@@ -119,7 +121,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       finalWorkflowData.state = {
         // Default values for expected properties
         deploymentStatuses: {},
-        hasActiveSchedule: false,
         hasActiveWebhook: false,
         // Preserve any existing state properties
         ...existingState,

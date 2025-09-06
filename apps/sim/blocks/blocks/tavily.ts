@@ -1,8 +1,6 @@
 import { TavilyIcon } from '@/components/icons'
-import type { TavilyExtractResponse, TavilySearchResponse } from '@/tools/tavily/types'
-import type { BlockConfig } from '../types'
-
-type TavilyResponse = TavilySearchResponse | TavilyExtractResponse
+import type { BlockConfig } from '@/blocks/types'
+import type { TavilyResponse } from '@/tools/tavily/types'
 
 export const TavilyBlock: BlockConfig<TavilyResponse> = {
   type: 'tavily',
@@ -11,11 +9,10 @@ export const TavilyBlock: BlockConfig<TavilyResponse> = {
   longDescription:
     "Access Tavily's AI-powered search engine to find relevant information from across the web. Extract and process content from specific URLs with customizable depth options.",
   category: 'tools',
-  docsLink: 'https://docs.simstudio.ai/tools/tavily',
+  docsLink: 'https://docs.sim.ai/tools/tavily',
   bgColor: '#0066FF',
   icon: TavilyIcon,
   subBlocks: [
-    // Operation selector
     {
       id: 'operation',
       title: 'Operation',
@@ -27,16 +24,6 @@ export const TavilyBlock: BlockConfig<TavilyResponse> = {
       ],
       value: () => 'tavily_search',
     },
-    // API Key (common)
-    {
-      id: 'apiKey',
-      title: 'API Key',
-      type: 'short-input',
-      layout: 'full',
-      placeholder: 'Enter your Tavily API key',
-      password: true,
-    },
-    // Search operation inputs
     {
       id: 'query',
       title: 'Search Query',
@@ -44,6 +31,7 @@ export const TavilyBlock: BlockConfig<TavilyResponse> = {
       layout: 'full',
       placeholder: 'Enter your search query...',
       condition: { field: 'operation', value: 'tavily_search' },
+      required: true,
     },
     {
       id: 'maxResults',
@@ -53,7 +41,6 @@ export const TavilyBlock: BlockConfig<TavilyResponse> = {
       placeholder: '5',
       condition: { field: 'operation', value: 'tavily_search' },
     },
-    // Extract operation inputs
     {
       id: 'urls',
       title: 'URL',
@@ -61,6 +48,7 @@ export const TavilyBlock: BlockConfig<TavilyResponse> = {
       layout: 'full',
       placeholder: 'Enter URL to extract content from...',
       condition: { field: 'operation', value: 'tavily_extract' },
+      required: true,
     },
     {
       id: 'extract_depth',
@@ -73,6 +61,15 @@ export const TavilyBlock: BlockConfig<TavilyResponse> = {
       ],
       value: () => 'basic',
       condition: { field: 'operation', value: 'tavily_extract' },
+    },
+    {
+      id: 'apiKey',
+      title: 'API Key',
+      type: 'short-input',
+      layout: 'full',
+      placeholder: 'Enter your Tavily API key',
+      password: true,
+      required: true,
     },
   ],
   tools: {
@@ -91,21 +88,19 @@ export const TavilyBlock: BlockConfig<TavilyResponse> = {
     },
   },
   inputs: {
-    operation: { type: 'string', required: true },
-    apiKey: { type: 'string', required: true },
-    // Search operation
-    query: { type: 'string', required: false },
-    maxResults: { type: 'number', required: false },
-    // Extract operation
-    urls: { type: 'string', required: false },
-    extract_depth: { type: 'string', required: false },
+    operation: { type: 'string', description: 'Operation to perform' },
+    apiKey: { type: 'string', description: 'Tavily API key' },
+    query: { type: 'string', description: 'Search query terms' },
+    maxResults: { type: 'number', description: 'Maximum search results' },
+    urls: { type: 'string', description: 'URL to extract' },
+    extract_depth: { type: 'string', description: 'Extraction depth level' },
   },
   outputs: {
-    results: 'json',
-    answer: 'any',
-    query: 'string',
-    content: 'string',
-    title: 'string',
-    url: 'string',
+    results: { type: 'json', description: 'Search results data' },
+    answer: { type: 'any', description: 'Search answer' },
+    query: { type: 'string', description: 'Query used' },
+    content: { type: 'string', description: 'Extracted content' },
+    title: { type: 'string', description: 'Page title' },
+    url: { type: 'string', description: 'Source URL' },
   },
 }

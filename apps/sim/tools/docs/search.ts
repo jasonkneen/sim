@@ -1,4 +1,4 @@
-import type { ToolConfig, ToolResponse } from '../types'
+import type { ToolConfig, ToolResponse } from '@/tools/types'
 
 interface DocsSearchParams {
   query: string
@@ -27,7 +27,7 @@ export const docsSearchTool: ToolConfig<DocsSearchParams, DocsSearchResponse> = 
   id: 'docs_search_internal',
   name: 'Search Documentation',
   description:
-    'Search Sim Studio documentation for information about features, tools, workflows, and functionality',
+    'Search Sim documentation for information about features, tools, workflows, and functionality',
   version: '1.0.0',
 
   params: {
@@ -39,7 +39,7 @@ export const docsSearchTool: ToolConfig<DocsSearchParams, DocsSearchResponse> = 
     topK: {
       type: 'number',
       required: false,
-      description: 'Number of results to return (default: 5, max: 20)',
+      description: 'Number of results to return (default: 10, max: 20)',
     },
   },
 
@@ -51,7 +51,7 @@ export const docsSearchTool: ToolConfig<DocsSearchParams, DocsSearchResponse> = 
     }),
     body: (params) => {
       // Validate and clamp topK parameter
-      let topK = params.topK || 5
+      let topK = params.topK || 10
       if (topK > 20) topK = 20
       if (topK < 1) topK = 1
 

@@ -2,7 +2,7 @@ import { existsSync } from 'fs'
 import { mkdir } from 'fs/promises'
 import path, { join } from 'path'
 import { env } from '@/lib/env'
-import { createLogger } from '@/lib/logs/console-logger'
+import { createLogger } from '@/lib/logs/console/logger'
 
 const logger = createLogger('UploadsSetup')
 
@@ -46,6 +46,18 @@ export const BLOB_KB_CONFIG = {
   accountKey: env.AZURE_ACCOUNT_KEY || '',
   connectionString: env.AZURE_CONNECTION_STRING || '',
   containerName: env.AZURE_STORAGE_KB_CONTAINER_NAME || '',
+}
+
+export const S3_CHAT_CONFIG = {
+  bucket: env.S3_CHAT_BUCKET_NAME || '',
+  region: env.AWS_REGION || '',
+}
+
+export const BLOB_CHAT_CONFIG = {
+  accountName: env.AZURE_ACCOUNT_NAME || '',
+  accountKey: env.AZURE_ACCOUNT_KEY || '',
+  connectionString: env.AZURE_CONNECTION_STRING || '',
+  containerName: env.AZURE_STORAGE_CHAT_CONTAINER_NAME || '',
 }
 
 export async function ensureUploadsDirectory() {

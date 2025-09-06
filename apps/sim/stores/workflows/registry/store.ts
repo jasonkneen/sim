@@ -1,13 +1,18 @@
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
-import { createLogger } from '@/lib/logs/console-logger'
+import { createLogger } from '@/lib/logs/console/logger'
+import { generateCreativeWorkflowName } from '@/lib/naming'
+import { API_ENDPOINTS } from '@/stores/constants'
 import { clearWorkflowVariablesTracking } from '@/stores/panel/variables/store'
-import { API_ENDPOINTS } from '../../constants'
-import { useSubBlockStore } from '../subblock/store'
-import { useWorkflowStore } from '../workflow/store'
-import type { BlockState } from '../workflow/types'
-import type { DeploymentStatus, WorkflowMetadata, WorkflowRegistry } from './types'
-import { generateUniqueName, getNextWorkflowColor } from './utils'
+import type {
+  DeploymentStatus,
+  WorkflowMetadata,
+  WorkflowRegistry,
+} from '@/stores/workflows/registry/types'
+import { getNextWorkflowColor } from '@/stores/workflows/registry/utils'
+import { useSubBlockStore } from '@/stores/workflows/subblock/store'
+import { useWorkflowStore } from '@/stores/workflows/workflow/store'
+import type { BlockState } from '@/stores/workflows/workflow/types'
 
 const logger = createLogger('WorkflowRegistry')
 
@@ -188,7 +193,6 @@ function resetWorkflowStores() {
     isDeployed: false,
     deployedAt: undefined,
     deploymentStatuses: {}, // Reset deployment statuses map
-    hasActiveSchedule: false,
     history: {
       past: [],
       present: {
@@ -212,7 +216,6 @@ function resetWorkflowStores() {
   // Reset the subblock store
   useSubBlockStore.setState({
     workflowValues: {},
-    toolParams: {},
   })
 }
 
@@ -442,7 +445,6 @@ export const useWorkflowRegistry = create<WorkflowRegistry>()(
             lastSaved: Date.now(),
             marketplaceData: workflowData.marketplaceData || null,
             deploymentStatuses: {},
-            hasActiveSchedule: false,
             history: {
               past: [],
               present: {
@@ -491,7 +493,6 @@ export const useWorkflowRegistry = create<WorkflowRegistry>()(
             isDeployed: false,
             deployedAt: undefined,
             deploymentStatuses: {},
-            hasActiveSchedule: false,
             history: {
               past: [],
               present: {
@@ -572,7 +573,7 @@ export const useWorkflowRegistry = create<WorkflowRegistry>()(
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              name: options.name || generateUniqueName(),
+              name: options.name || generateCreativeWorkflowName(),
               description: options.description || 'New workflow',
               color: options.marketplaceId ? '#808080' : getNextWorkflowColor(),
               workspaceId,
@@ -833,7 +834,7 @@ export const useWorkflowRegistry = create<WorkflowRegistry>()(
         // Generate workflow metadata with marketplace properties
         const newWorkflow: WorkflowMetadata = {
           id,
-          name: metadata.name || generateUniqueName(),
+          name: metadata.name || generateCreativeWorkflowName(),
           lastModified: new Date(),
           description: metadata.description || 'Imported from marketplace',
           color: metadata.color || getNextWorkflowColor(),
@@ -1254,7 +1255,6 @@ export const useWorkflowRegistry = create<WorkflowRegistry>()(
               parallels: {},
               isDeployed: false,
               deployedAt: undefined,
-              hasActiveSchedule: false,
               history: {
                 past: [],
                 present: {

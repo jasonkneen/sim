@@ -4,10 +4,10 @@ import { checkEnvVarTrigger, EnvVarDropdown } from '@/components/ui/env-var-drop
 import { formatDisplayText } from '@/components/ui/formatted-text'
 import { Input } from '@/components/ui/input'
 import { checkTagTrigger, TagDropdown } from '@/components/ui/tag-dropdown'
-import { createLogger } from '@/lib/logs/console-logger'
+import { createLogger } from '@/lib/logs/console/logger'
 import { cn } from '@/lib/utils'
+import { useSubBlockValue } from '@/app/workspace/[workspaceId]/w/[workflowId]/components/workflow-block/components/sub-block/hooks/use-sub-block-value'
 import type { SubBlockConfig } from '@/blocks/types'
-import { useSubBlockValue } from '../hooks/use-sub-block-value'
 
 const logger = createLogger('ShortInput')
 
@@ -352,6 +352,7 @@ export function ShortInput({
             : formatDisplayText(value?.toString() ?? '', true)}
         </div>
       </div>
+
       <EnvVarDropdown
         visible={showEnvVars}
         onSelect={handleEnvVarSelect}

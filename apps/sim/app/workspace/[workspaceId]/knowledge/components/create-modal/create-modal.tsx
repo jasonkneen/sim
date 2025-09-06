@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { AlertCircle, CheckCircle2, X } from 'lucide-react'
+import { useParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -11,11 +12,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { createLogger } from '@/lib/logs/console-logger'
-import { getDocumentIcon } from '@/app/workspace/[workspaceId]/knowledge/components/icons/document-icons'
+import { createLogger } from '@/lib/logs/console/logger'
+import { getDocumentIcon } from '@/app/workspace/[workspaceId]/knowledge/components'
+import { useKnowledgeUpload } from '@/app/workspace/[workspaceId]/knowledge/hooks/use-knowledge-upload'
 import type { KnowledgeBaseData } from '@/stores/knowledge/store'
-import { useKnowledgeUpload } from '../../hooks/use-knowledge-upload'
-import { type TagData, TagInput } from '../tag-input/tag-input'
 
 const logger = createLogger('CreateModal')
 
@@ -74,6 +74,9 @@ interface SubmitStatus {
 }
 
 export function CreateModal({ open, onOpenChange, onKnowledgeBaseCreated }: CreateModalProps) {
+  const params = useParams()
+  const workspaceId = params.workspaceId as string
+
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus | null>(null)
@@ -81,7 +84,7 @@ export function CreateModal({ open, onOpenChange, onKnowledgeBaseCreated }: Crea
   const [fileError, setFileError] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [dragCounter, setDragCounter] = useState(0) // Track drag events to handle nested elements
-  const [tags, setTags] = useState<TagData>({})
+
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const dropZoneRef = useRef<HTMLDivElement>(null)
 
@@ -246,6 +249,7 @@ export function CreateModal({ open, onOpenChange, onKnowledgeBaseCreated }: Crea
       const knowledgeBasePayload = {
         name: data.name,
         description: data.description || undefined,
+        workspaceId: workspaceId,
         chunkingConfig: {
           maxSize: data.maxChunkSize,
           minSize: data.minChunkSize,
@@ -275,14 +279,7 @@ export function CreateModal({ open, onOpenChange, onKnowledgeBaseCreated }: Crea
       const newKnowledgeBase = result.data
 
       if (files.length > 0) {
-        // Add tags to files before upload
-        const filesWithTags = files.map((file) => {
-          const fileWithTags = file as File & TagData
-          Object.assign(fileWithTags, tags)
-          return fileWithTags
-        })
-
-        const uploadedFiles = await uploadFiles(filesWithTags, newKnowledgeBase.id, {
+        const uploadedFiles = await uploadFiles(files, newKnowledgeBase.id, {
           chunkSize: data.maxChunkSize,
           minCharactersPerChunk: data.minChunkSize,
           chunkOverlap: data.overlapSize,
@@ -306,7 +303,6 @@ export function CreateModal({ open, onOpenChange, onKnowledgeBaseCreated }: Crea
         maxChunkSize: 1024,
         overlapSize: 200,
       })
-      setTags({})
 
       // Clean up file previews
       files.forEach((file) => URL.revokeObjectURL(file.preview))
@@ -480,11 +476,6 @@ export function CreateModal({ open, onOpenChange, onKnowledgeBaseCreated }: Crea
                       provide more precise retrieval but may lose context.
                     </p>
                   </div>
-                </div>
-
-                {/* Tag Input Section */}
-                <div className='mt-6'>
-                  <TagInput tags={tags} onTagsChange={setTags} disabled={isSubmitting} />
                 </div>
 
                 {/* File Upload Section - Expands to fill remaining space */}

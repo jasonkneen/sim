@@ -1,5 +1,5 @@
-import type { ParameterVisibility, ToolConfig } from './types'
-import { getTool } from './utils'
+import type { ParameterVisibility, ToolConfig } from '@/tools/types'
+import { getTool } from '@/tools/utils'
 
 export interface Option {
   label: string
@@ -108,7 +108,7 @@ let blockConfigCache: Record<string, BlockConfig> | null = null
 function getBlockConfigurations(): Record<string, BlockConfig> {
   if (!blockConfigCache) {
     try {
-      const { getAllBlocks } = require('../blocks')
+      const { getAllBlocks } = require('@/blocks')
       const allBlocks = getAllBlocks()
       blockConfigCache = {}
       allBlocks.forEach((block: BlockConfig) => {

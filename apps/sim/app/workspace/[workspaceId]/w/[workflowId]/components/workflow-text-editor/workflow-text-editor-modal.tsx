@@ -12,12 +12,15 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { createLogger } from '@/lib/logs/console-logger'
+import { createLogger } from '@/lib/logs/console/logger'
 import { cn } from '@/lib/utils'
+import { applyWorkflowDiff } from '@/app/workspace/[workspaceId]/w/[workflowId]/components/workflow-text-editor/workflow-applier'
+import { exportWorkflow } from '@/app/workspace/[workspaceId]/w/[workflowId]/components/workflow-text-editor/workflow-exporter'
+import {
+  type EditorFormat,
+  WorkflowTextEditor,
+} from '@/app/workspace/[workspaceId]/w/[workflowId]/components/workflow-text-editor/workflow-text-editor'
 import { useWorkflowRegistry } from '@/stores/workflows/registry/store'
-import { applyWorkflowDiff } from './workflow-applier'
-import { exportWorkflow } from './workflow-exporter'
-import { type EditorFormat, WorkflowTextEditor } from './workflow-text-editor'
 
 const logger = createLogger('WorkflowTextEditorModal')
 
@@ -61,6 +64,12 @@ export function WorkflowTextEditorModal({
   // Handle save operation
   const handleSave = useCallback(
     async (content: string, contentFormat: EditorFormat) => {
+      console.log('🔥 WorkflowTextEditorModal.handleSave called!', {
+        contentFormat,
+        contentLength: content.length,
+        activeWorkflowId,
+      })
+
       if (!activeWorkflowId) {
         return { success: false, errors: ['No active workflow'] }
       }
@@ -68,8 +77,12 @@ export function WorkflowTextEditorModal({
       try {
         logger.info('Applying workflow changes from text editor', { format: contentFormat })
 
+        console.log('🔥 About to call applyWorkflowDiff!', { contentFormat })
+
         // Apply changes using the simplified approach
         const applyResult = await applyWorkflowDiff(content, contentFormat)
+
+        console.log('🔥 applyWorkflowDiff returned!', { success: applyResult.success })
 
         if (applyResult.success) {
           logger.info('Successfully applied workflow changes', {

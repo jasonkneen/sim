@@ -57,9 +57,15 @@ const generateOutputPaths = (outputs: Record<string, any>, prefix = ''): string[
       // Simple type like 'string', 'number', 'json', 'any'
       paths.push(currentPath)
     } else if (typeof value === 'object' && value !== null) {
-      // Nested object - recurse
-      const subPaths = generateOutputPaths(value, currentPath)
-      paths.push(...subPaths)
+      // Check if this is our new format with type and description
+      if ('type' in value && typeof value.type === 'string') {
+        // New format: { type: 'string', description: '...' } - treat as leaf node
+        paths.push(currentPath)
+      } else {
+        // Legacy nested object - recurse
+        const subPaths = generateOutputPaths(value, currentPath)
+        paths.push(...subPaths)
+      }
     } else {
       // Fallback - add the path
       paths.push(currentPath)
@@ -171,7 +177,23 @@ export const TagDropdown: React.FC<TagDropdownProps> = ({
 
       let blockTags: string[]
 
-      if (responseFormat) {
+      // Special handling for evaluator blocks
+      if (sourceBlock.type === 'evaluator') {
+        // Get the evaluation metrics for the evaluator block
+        const metricsValue = useSubBlockStore.getState().getValue(activeSourceBlockId, 'metrics')
+
+        if (metricsValue && Array.isArray(metricsValue) && metricsValue.length > 0) {
+          // Use the metric names as the available outputs
+          const validMetrics = metricsValue.filter((metric: any) => metric?.name)
+          blockTags = validMetrics.map(
+            (metric: any) => `${normalizedBlockName}.${metric.name.toLowerCase()}`
+          )
+        } else {
+          // Fallback to default evaluator outputs if no metrics are defined
+          const outputPaths = generateOutputPaths(blockConfig.outputs)
+          blockTags = outputPaths.map((path) => `${normalizedBlockName}.${path}`)
+        }
+      } else if (responseFormat) {
         // Use custom schema properties if response format is specified
         const schemaFields = extractFieldsFromSchema(responseFormat)
         if (schemaFields.length > 0) {
@@ -182,8 +204,40 @@ export const TagDropdown: React.FC<TagDropdownProps> = ({
           blockTags = outputPaths.map((path) => `${normalizedBlockName}.${path}`)
         }
       } else if (Object.keys(blockConfig.outputs).length === 0) {
-        // Handle blocks with no outputs (like starter) - show as just <blockname>
-        blockTags = [normalizedBlockName]
+        // Handle blocks with no outputs (like starter) - check for custom input fields
+        if (sourceBlock.type === 'starter') {
+          // Check what start workflow mode is selected
+          const startWorkflowValue = useSubBlockStore
+            .getState()
+            .getValue(activeSourceBlockId, 'startWorkflow')
+
+          if (startWorkflowValue === 'chat') {
+            // For chat mode, provide input and conversationId
+            blockTags = [`${normalizedBlockName}.input`, `${normalizedBlockName}.conversationId`]
+          } else {
+            // Check for custom input format fields (for manual mode)
+            const inputFormatValue = useSubBlockStore
+              .getState()
+              .getValue(activeSourceBlockId, 'inputFormat')
+
+            if (
+              inputFormatValue &&
+              Array.isArray(inputFormatValue) &&
+              inputFormatValue.length > 0
+            ) {
+              // Use custom input fields if they exist
+              blockTags = inputFormatValue
+                .filter((field: any) => field.name && field.name.trim() !== '')
+                .map((field: any) => `${normalizedBlockName}.${field.name}`)
+            } else {
+              // Fallback to just the block name
+              blockTags = [normalizedBlockName]
+            }
+          }
+        } else {
+          // Other blocks with no outputs - show as just <blockname>
+          blockTags = [normalizedBlockName]
+        }
       } else {
         // Use default block outputs
         const outputPaths = generateOutputPaths(blockConfig.outputs)
@@ -398,7 +452,23 @@ export const TagDropdown: React.FC<TagDropdownProps> = ({
 
       let blockTags: string[]
 
-      if (responseFormat) {
+      // Special handling for evaluator blocks
+      if (accessibleBlock.type === 'evaluator') {
+        // Get the evaluation metrics for the evaluator block
+        const metricsValue = useSubBlockStore.getState().getValue(accessibleBlockId, 'metrics')
+
+        if (metricsValue && Array.isArray(metricsValue) && metricsValue.length > 0) {
+          // Use the metric names as the available outputs
+          const validMetrics = metricsValue.filter((metric: any) => metric?.name)
+          blockTags = validMetrics.map(
+            (metric: any) => `${normalizedBlockName}.${metric.name.toLowerCase()}`
+          )
+        } else {
+          // Fallback to default evaluator outputs if no metrics are defined
+          const outputPaths = generateOutputPaths(blockConfig.outputs)
+          blockTags = outputPaths.map((path) => `${normalizedBlockName}.${path}`)
+        }
+      } else if (responseFormat) {
         // Use custom schema properties if response format is specified
         const schemaFields = extractFieldsFromSchema(responseFormat)
         if (schemaFields.length > 0) {
@@ -409,8 +479,40 @@ export const TagDropdown: React.FC<TagDropdownProps> = ({
           blockTags = outputPaths.map((path) => `${normalizedBlockName}.${path}`)
         }
       } else if (Object.keys(blockConfig.outputs).length === 0) {
-        // Handle blocks with no outputs (like starter) - show as just <blockname>
-        blockTags = [normalizedBlockName]
+        // Handle blocks with no outputs (like starter) - check for custom input fields
+        if (accessibleBlock.type === 'starter') {
+          // Check what start workflow mode is selected
+          const startWorkflowValue = useSubBlockStore
+            .getState()
+            .getValue(accessibleBlockId, 'startWorkflow')
+
+          if (startWorkflowValue === 'chat') {
+            // For chat mode, provide input and conversationId
+            blockTags = [`${normalizedBlockName}.input`, `${normalizedBlockName}.conversationId`]
+          } else {
+            // Check for custom input format fields (for manual mode)
+            const inputFormatValue = useSubBlockStore
+              .getState()
+              .getValue(accessibleBlockId, 'inputFormat')
+
+            if (
+              inputFormatValue &&
+              Array.isArray(inputFormatValue) &&
+              inputFormatValue.length > 0
+            ) {
+              // Use custom input fields if they exist
+              blockTags = inputFormatValue
+                .filter((field: any) => field.name && field.name.trim() !== '')
+                .map((field: any) => `${normalizedBlockName}.${field.name}`)
+            } else {
+              // Fallback to just the block name
+              blockTags = [normalizedBlockName]
+            }
+          }
+        } else {
+          // Other blocks with no outputs - show as just <blockname>
+          blockTags = [normalizedBlockName]
+        }
       } else {
         // Use default block outputs
         const outputPaths = generateOutputPaths(blockConfig.outputs)

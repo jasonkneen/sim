@@ -1,25 +1,18 @@
 import { OutlookIcon } from '@/components/icons'
-import type {
-  OutlookDraftResponse,
-  OutlookReadResponse,
-  OutlookSendResponse,
-} from '@/tools/outlook/types'
-import type { BlockConfig } from '../types'
+import type { BlockConfig } from '@/blocks/types'
+import type { OutlookResponse } from '@/tools/outlook/types'
 
-export const OutlookBlock: BlockConfig<
-  OutlookReadResponse | OutlookSendResponse | OutlookDraftResponse
-> = {
+export const OutlookBlock: BlockConfig<OutlookResponse> = {
   type: 'outlook',
   name: 'Outlook',
   description: 'Access Outlook',
   longDescription:
     'Integrate Outlook functionality to read, draft, andsend email messages within your workflow. Automate email communications and process email content using OAuth authentication.',
-  docsLink: 'https://docs.simstudio.ai/tools/outlook',
+  docsLink: 'https://docs.sim.ai/tools/outlook',
   category: 'tools',
   bgColor: '#E0E0E0',
   icon: OutlookIcon,
   subBlocks: [
-    // Operation selector
     {
       id: 'operation',
       title: 'Operation',
@@ -30,8 +23,8 @@ export const OutlookBlock: BlockConfig<
         { label: 'Draft Email', id: 'draft_outlook' },
         { label: 'Read Email', id: 'read_outlook' },
       ],
+      value: () => 'send_outlook',
     },
-    // Gmail Credentials
     {
       id: 'credential',
       title: 'Microsoft Account',
@@ -50,8 +43,8 @@ export const OutlookBlock: BlockConfig<
         'email',
       ],
       placeholder: 'Select Microsoft account',
+      required: true,
     },
-    // Send Email Fields
     {
       id: 'to',
       title: 'To',
@@ -59,6 +52,7 @@ export const OutlookBlock: BlockConfig<
       layout: 'full',
       placeholder: 'Recipient email address',
       condition: { field: 'operation', value: ['send_outlook', 'draft_outlook'] },
+      required: true,
     },
     {
       id: 'subject',
@@ -67,6 +61,7 @@ export const OutlookBlock: BlockConfig<
       layout: 'full',
       placeholder: 'Email subject',
       condition: { field: 'operation', value: ['send_outlook', 'draft_outlook'] },
+      required: true,
     },
     {
       id: 'body',
@@ -75,8 +70,9 @@ export const OutlookBlock: BlockConfig<
       layout: 'full',
       placeholder: 'Email content',
       condition: { field: 'operation', value: ['send_outlook', 'draft_outlook'] },
+      required: true,
     },
-    // Read Email Fields - Add folder selector
+    // Read Email Fields - Add folder selector (basic mode)
     {
       id: 'folder',
       title: 'Folder',
@@ -86,6 +82,17 @@ export const OutlookBlock: BlockConfig<
       serviceId: 'outlook',
       requiredScopes: ['Mail.ReadWrite', 'Mail.ReadBasic', 'Mail.Read'],
       placeholder: 'Select Outlook folder',
+      mode: 'basic',
+      condition: { field: 'operation', value: 'read_outlook' },
+    },
+    // Manual folder input (advanced mode)
+    {
+      id: 'manualFolder',
+      title: 'Folder',
+      type: 'short-input',
+      layout: 'full',
+      placeholder: 'Enter Outlook folder name (e.g., INBOX, SENT, or custom folder)',
+      mode: 'advanced',
       condition: { field: 'operation', value: 'read_outlook' },
     },
     {
@@ -114,11 +121,14 @@ export const OutlookBlock: BlockConfig<
       },
       params: (params) => {
         // Pass the credential directly from the credential field
-        const { credential, ...rest } = params
+        const { credential, folder, manualFolder, ...rest } = params
+
+        // Handle folder input (selector or manual)
+        const effectiveFolder = (folder || manualFolder || '').trim()
 
         // Set default folder to INBOX if not specified
-        if (rest.operation === 'read_outlook' && !rest.folder) {
-          rest.folder = 'INBOX'
+        if (rest.operation === 'read_outlook') {
+          rest.folder = effectiveFolder || 'INBOX'
         }
 
         return {
@@ -129,18 +139,19 @@ export const OutlookBlock: BlockConfig<
     },
   },
   inputs: {
-    operation: { type: 'string', required: true },
-    credential: { type: 'string', required: true },
+    operation: { type: 'string', description: 'Operation to perform' },
+    credential: { type: 'string', description: 'Outlook access token' },
     // Send operation inputs
-    to: { type: 'string', required: false },
-    subject: { type: 'string', required: false },
-    body: { type: 'string', required: false },
+    to: { type: 'string', description: 'Recipient email address' },
+    subject: { type: 'string', description: 'Email subject' },
+    body: { type: 'string', description: 'Email content' },
     // Read operation inputs
-    folder: { type: 'string', required: false },
-    maxResults: { type: 'number', required: false },
+    folder: { type: 'string', description: 'Email folder' },
+    manualFolder: { type: 'string', description: 'Manual folder name' },
+    maxResults: { type: 'number', description: 'Maximum emails' },
   },
   outputs: {
-    message: 'string',
-    results: 'json',
+    message: { type: 'string', description: 'Response message' },
+    results: { type: 'json', description: 'Email results' },
   },
 }

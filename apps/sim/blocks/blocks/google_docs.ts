@@ -1,15 +1,6 @@
 import { GoogleDocsIcon } from '@/components/icons'
-import type {
-  GoogleDocsCreateResponse,
-  GoogleDocsReadResponse,
-  GoogleDocsWriteResponse,
-} from '@/tools/google_docs/types'
-import type { BlockConfig } from '../types'
-
-type GoogleDocsResponse =
-  | GoogleDocsReadResponse
-  | GoogleDocsWriteResponse
-  | GoogleDocsCreateResponse
+import type { BlockConfig } from '@/blocks/types'
+import type { GoogleDocsResponse } from '@/tools/google_docs/types'
 
 export const GoogleDocsBlock: BlockConfig<GoogleDocsResponse> = {
   type: 'google_docs',
@@ -17,7 +8,7 @@ export const GoogleDocsBlock: BlockConfig<GoogleDocsResponse> = {
   description: 'Read, write, and create documents',
   longDescription:
     'Integrate Google Docs functionality to manage documents. Read content from existing documents, write to documents, and create new documents using OAuth authentication. Supports text content manipulation for document creation and editing.',
-  docsLink: 'https://docs.simstudio.ai/tools/google_docs',
+  docsLink: 'https://docs.sim.ai/tools/google_docs',
   category: 'tools',
   bgColor: '#E0E0E0',
   icon: GoogleDocsIcon,
@@ -33,6 +24,7 @@ export const GoogleDocsBlock: BlockConfig<GoogleDocsResponse> = {
         { label: 'Write to Document', id: 'write' },
         { label: 'Create Document', id: 'create' },
       ],
+      value: () => 'read',
     },
     // Google Docs Credentials
     {
@@ -40,12 +32,13 @@ export const GoogleDocsBlock: BlockConfig<GoogleDocsResponse> = {
       title: 'Google Account',
       type: 'oauth-input',
       layout: 'full',
+      required: true,
       provider: 'google-docs',
       serviceId: 'google-docs',
       requiredScopes: ['https://www.googleapis.com/auth/drive.file'],
       placeholder: 'Select Google account',
     },
-    // Document Selector for read operation
+    // Document selector (basic mode)
     {
       id: 'documentId',
       title: 'Select Document',
@@ -56,38 +49,18 @@ export const GoogleDocsBlock: BlockConfig<GoogleDocsResponse> = {
       requiredScopes: [],
       mimeType: 'application/vnd.google-apps.document',
       placeholder: 'Select a document',
-      condition: { field: 'operation', value: 'read' },
+      mode: 'basic',
+      condition: { field: 'operation', value: ['read', 'write'] },
     },
-    // Document Selector for write operation
-    {
-      id: 'documentId',
-      title: 'Select Document',
-      type: 'file-selector',
-      layout: 'full',
-      provider: 'google-drive',
-      serviceId: 'google-drive',
-      requiredScopes: [],
-      mimeType: 'application/vnd.google-apps.document',
-      placeholder: 'Select a document',
-      condition: { field: 'operation', value: 'write' },
-    },
-    // Manual Document ID for read operation
+    // Manual document ID input (advanced mode)
     {
       id: 'manualDocumentId',
-      title: 'Or Enter Document ID Manually',
+      title: 'Document ID',
       type: 'short-input',
       layout: 'full',
-      placeholder: 'ID of the document',
-      condition: { field: 'operation', value: 'read' },
-    },
-    // Manual Document ID for write operation
-    {
-      id: 'manualDocumentId',
-      title: 'Or Enter Document ID Manually',
-      type: 'short-input',
-      layout: 'full',
-      placeholder: 'ID of the document',
-      condition: { field: 'operation', value: 'write' },
+      placeholder: 'Enter document ID',
+      mode: 'advanced',
+      condition: { field: 'operation', value: ['read', 'write'] },
     },
     // Create-specific Fields
     {
@@ -97,8 +70,9 @@ export const GoogleDocsBlock: BlockConfig<GoogleDocsResponse> = {
       layout: 'full',
       placeholder: 'Enter title for the new document',
       condition: { field: 'operation', value: 'create' },
+      required: true,
     },
-    // Folder Selector for create operation
+    // Folder selector (basic mode)
     {
       id: 'folderSelector',
       title: 'Select Parent Folder',
@@ -109,15 +83,17 @@ export const GoogleDocsBlock: BlockConfig<GoogleDocsResponse> = {
       requiredScopes: [],
       mimeType: 'application/vnd.google-apps.folder',
       placeholder: 'Select a parent folder',
+      mode: 'basic',
       condition: { field: 'operation', value: 'create' },
     },
-    // Manual Folder ID for create operation
+    // Manual folder ID input (advanced mode)
     {
       id: 'folderId',
-      title: 'Or Enter Parent Folder ID Manually',
+      title: 'Parent Folder ID',
       type: 'short-input',
       layout: 'full',
-      placeholder: 'ID of the parent folder (leave empty for root folder)',
+      placeholder: 'Enter parent folder ID (leave empty for root folder)',
+      mode: 'advanced',
       condition: { field: 'operation', value: 'create' },
     },
     // Content Field for write operation
@@ -128,6 +104,7 @@ export const GoogleDocsBlock: BlockConfig<GoogleDocsResponse> = {
       layout: 'full',
       placeholder: 'Enter document content',
       condition: { field: 'operation', value: 'write' },
+      required: true,
     },
     // Content Field for create operation
     {
@@ -171,18 +148,18 @@ export const GoogleDocsBlock: BlockConfig<GoogleDocsResponse> = {
     },
   },
   inputs: {
-    operation: { type: 'string', required: true },
-    credential: { type: 'string', required: true },
-    documentId: { type: 'string', required: false },
-    manualDocumentId: { type: 'string', required: false },
-    title: { type: 'string', required: false },
-    folderSelector: { type: 'string', required: false },
-    folderId: { type: 'string', required: false },
-    content: { type: 'string', required: false },
+    operation: { type: 'string', description: 'Operation to perform' },
+    credential: { type: 'string', description: 'Google Docs access token' },
+    documentId: { type: 'string', description: 'Document identifier' },
+    manualDocumentId: { type: 'string', description: 'Manual document identifier' },
+    title: { type: 'string', description: 'Document title' },
+    folderSelector: { type: 'string', description: 'Selected folder' },
+    folderId: { type: 'string', description: 'Folder identifier' },
+    content: { type: 'string', description: 'Document content' },
   },
   outputs: {
-    content: 'string',
-    metadata: 'json',
-    updatedContent: 'boolean',
+    content: { type: 'string', description: 'Document content' },
+    metadata: { type: 'json', description: 'Document metadata' },
+    updatedContent: { type: 'boolean', description: 'Content update status' },
   },
 }

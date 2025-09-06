@@ -1,14 +1,14 @@
 import { and, eq } from 'drizzle-orm'
 import { type NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
-import { createLogger } from '@/lib/logs/console-logger'
-import { workflow, workspaceMember } from '@/db/schema'
+import { createLogger } from '@/lib/logs/console/logger'
+import { workflow } from '@/db/schema'
 
 const logger = createLogger('WorkspaceByIdAPI')
 
 import { getUserEntityPermissions } from '@/lib/permissions/utils'
 import { db } from '@/db'
-import { permissions, workspace } from '@/db/schema'
+import { knowledgeBase, permissions, workspace } from '@/db/schema'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -126,8 +126,12 @@ export async function DELETE(
       // workflow_schedule, webhook, marketplace, chat, and memory records
       await tx.delete(workflow).where(eq(workflow.workspaceId, workspaceId))
 
-      // Delete workspace members
-      await tx.delete(workspaceMember).where(eq(workspaceMember.workspaceId, workspaceId))
+      // Clear workspace ID from knowledge bases instead of deleting them
+      // This allows knowledge bases to become "unassigned" rather than being deleted
+      await tx
+        .update(knowledgeBase)
+        .set({ workspaceId: null, updatedAt: new Date() })
+        .where(eq(knowledgeBase.workspaceId, workspaceId))
 
       // Delete all permissions associated with this workspace
       await tx

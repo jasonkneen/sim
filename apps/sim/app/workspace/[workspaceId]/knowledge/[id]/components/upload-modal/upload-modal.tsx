@@ -5,9 +5,8 @@ import { X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
-import { createLogger } from '@/lib/logs/console-logger'
-import { type TagData, TagInput } from '../../../components/tag-input/tag-input'
-import { useKnowledgeUpload } from '../../../hooks/use-knowledge-upload'
+import { createLogger } from '@/lib/logs/console/logger'
+import { useKnowledgeUpload } from '@/app/workspace/[workspaceId]/knowledge/hooks/use-knowledge-upload'
 
 const logger = createLogger('UploadModal')
 
@@ -47,7 +46,7 @@ export function UploadModal({
 }: UploadModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [files, setFiles] = useState<FileWithPreview[]>([])
-  const [tags, setTags] = useState<TagData>({})
+
   const [fileError, setFileError] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
 
@@ -63,7 +62,6 @@ export function UploadModal({
     if (isUploading) return // Prevent closing during upload
 
     setFiles([])
-    setTags({})
     setFileError(null)
     setIsDragging(false)
     onOpenChange(false)
@@ -142,15 +140,7 @@ export function UploadModal({
     if (files.length === 0) return
 
     try {
-      // Create files with tags for upload
-      const filesWithTags = files.map((file) => {
-        // Add tags as custom properties to the file object
-        const fileWithTags = file as File & TagData
-        Object.assign(fileWithTags, tags)
-        return fileWithTags
-      })
-
-      await uploadFiles(filesWithTags, knowledgeBaseId, {
+      await uploadFiles(files, knowledgeBaseId, {
         chunkSize: chunkingConfig?.maxSize || 1024,
         minCharactersPerChunk: chunkingConfig?.minSize || 100,
         chunkOverlap: chunkingConfig?.overlap || 200,
@@ -169,9 +159,6 @@ export function UploadModal({
         </DialogHeader>
 
         <div className='flex-1 space-y-6 overflow-auto'>
-          {/* Tag Input Section */}
-          <TagInput tags={tags} onTagsChange={setTags} disabled={isUploading} />
-
           {/* File Upload Section */}
           <div className='space-y-3'>
             <Label>Select Files</Label>

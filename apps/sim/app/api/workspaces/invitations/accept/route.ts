@@ -4,7 +4,9 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { env } from '@/lib/env'
 import { db } from '@/db'
-import { permissions, user, workspace, workspaceInvitation, workspaceMember } from '@/db/schema'
+import { permissions, user, workspace, workspaceInvitation } from '@/db/schema'
+
+export const dynamic = 'force-dynamic'
 
 // Accept an invitation via token
 export async function GET(req: NextRequest) {
@@ -15,7 +17,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(
       new URL(
         '/invite/invite-error?reason=missing-token',
-        env.NEXT_PUBLIC_APP_URL || 'https://simstudio.ai'
+        env.NEXT_PUBLIC_APP_URL || 'https://sim.ai'
       )
     )
   }
@@ -26,7 +28,7 @@ export async function GET(req: NextRequest) {
     // No need to encode API URL as callback, just redirect to invite page
     // The middleware will handle proper login flow and return to invite page
     return NextResponse.redirect(
-      new URL(`/invite/${token}?token=${token}`, env.NEXT_PUBLIC_APP_URL || 'https://simstudio.ai')
+      new URL(`/invite/${token}?token=${token}`, env.NEXT_PUBLIC_APP_URL || 'https://sim.ai')
     )
   }
 
@@ -42,7 +44,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(
         new URL(
           '/invite/invite-error?reason=invalid-token',
-          env.NEXT_PUBLIC_APP_URL || 'https://simstudio.ai'
+          env.NEXT_PUBLIC_APP_URL || 'https://sim.ai'
         )
       )
     }
@@ -50,10 +52,7 @@ export async function GET(req: NextRequest) {
     // Check if invitation has expired
     if (new Date() > new Date(invitation.expiresAt)) {
       return NextResponse.redirect(
-        new URL(
-          '/invite/invite-error?reason=expired',
-          env.NEXT_PUBLIC_APP_URL || 'https://simstudio.ai'
-        )
+        new URL('/invite/invite-error?reason=expired', env.NEXT_PUBLIC_APP_URL || 'https://sim.ai')
       )
     }
 
@@ -62,7 +61,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(
         new URL(
           '/invite/invite-error?reason=already-processed',
-          env.NEXT_PUBLIC_APP_URL || 'https://simstudio.ai'
+          env.NEXT_PUBLIC_APP_URL || 'https://sim.ai'
         )
       )
     }
@@ -105,7 +104,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(
         new URL(
           `/invite/invite-error?reason=email-mismatch&details=${encodeURIComponent(`Invitation was sent to ${invitation.email}, but you're logged in as ${userData?.email || session.user.email}`)}`,
-          env.NEXT_PUBLIC_APP_URL || 'https://simstudio.ai'
+          env.NEXT_PUBLIC_APP_URL || 'https://sim.ai'
         )
       )
     }
@@ -121,25 +120,26 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(
         new URL(
           '/invite/invite-error?reason=workspace-not-found',
-          env.NEXT_PUBLIC_APP_URL || 'https://simstudio.ai'
+          env.NEXT_PUBLIC_APP_URL || 'https://sim.ai'
         )
       )
     }
 
-    // Check if user is already a member
-    const existingMembership = await db
+    // Check if user already has permissions for this workspace
+    const existingPermission = await db
       .select()
-      .from(workspaceMember)
+      .from(permissions)
       .where(
         and(
-          eq(workspaceMember.workspaceId, invitation.workspaceId),
-          eq(workspaceMember.userId, session.user.id)
+          eq(permissions.entityId, invitation.workspaceId),
+          eq(permissions.entityType, 'workspace'),
+          eq(permissions.userId, session.user.id)
         )
       )
       .then((rows) => rows[0])
 
-    if (existingMembership) {
-      // User is already a member, just mark the invitation as accepted and redirect
+    if (existingPermission) {
+      // User already has permissions, just mark the invitation as accepted and redirect
       await db
         .update(workspaceInvitation)
         .set({
@@ -151,39 +151,23 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(
         new URL(
           `/workspace/${invitation.workspaceId}/w`,
-          env.NEXT_PUBLIC_APP_URL || 'https://simstudio.ai'
+          env.NEXT_PUBLIC_APP_URL || 'https://sim.ai'
         )
       )
     }
 
-    // Add user to workspace, permissions, and mark invitation as accepted in a transaction
+    // Add user permissions and mark invitation as accepted in a transaction
     await db.transaction(async (tx) => {
-      // Add user to workspace
-      await tx.insert(workspaceMember).values({
+      // Create permissions for the user
+      await tx.insert(permissions).values({
         id: randomUUID(),
-        workspaceId: invitation.workspaceId,
+        entityType: 'workspace' as const,
+        entityId: invitation.workspaceId,
         userId: session.user.id,
-        role: invitation.role,
-        joinedAt: new Date(),
+        permissionType: invitation.permissions || 'read',
+        createdAt: new Date(),
         updatedAt: new Date(),
       })
-
-      // Create permissions for the user
-      const permissionsToInsert = [
-        {
-          id: randomUUID(),
-          entityType: 'workspace' as const,
-          entityId: invitation.workspaceId,
-          userId: session.user.id,
-          permissionType: invitation.permissions || 'read',
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      ]
-
-      if (permissionsToInsert.length > 0) {
-        await tx.insert(permissions).values(permissionsToInsert)
-      }
 
       // Mark invitation as accepted
       await tx
@@ -197,17 +181,14 @@ export async function GET(req: NextRequest) {
 
     // Redirect to the workspace
     return NextResponse.redirect(
-      new URL(
-        `/workspace/${invitation.workspaceId}/w`,
-        env.NEXT_PUBLIC_APP_URL || 'https://simstudio.ai'
-      )
+      new URL(`/workspace/${invitation.workspaceId}/w`, env.NEXT_PUBLIC_APP_URL || 'https://sim.ai')
     )
   } catch (error) {
     console.error('Error accepting invitation:', error)
     return NextResponse.redirect(
       new URL(
         '/invite/invite-error?reason=server-error',
-        env.NEXT_PUBLIC_APP_URL || 'https://simstudio.ai'
+        env.NEXT_PUBLIC_APP_URL || 'https://sim.ai'
       )
     )
   }

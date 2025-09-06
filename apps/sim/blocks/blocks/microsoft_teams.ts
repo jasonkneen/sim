@@ -1,11 +1,6 @@
 import { MicrosoftTeamsIcon } from '@/components/icons'
-import type {
-  MicrosoftTeamsReadResponse,
-  MicrosoftTeamsWriteResponse,
-} from '@/tools/microsoft_teams/types'
-import type { BlockConfig } from '../types'
-
-type MicrosoftTeamsResponse = MicrosoftTeamsReadResponse | MicrosoftTeamsWriteResponse
+import type { BlockConfig } from '@/blocks/types'
+import type { MicrosoftTeamsResponse } from '@/tools/microsoft_teams/types'
 
 export const MicrosoftTeamsBlock: BlockConfig<MicrosoftTeamsResponse> = {
   type: 'microsoft_teams',
@@ -13,7 +8,7 @@ export const MicrosoftTeamsBlock: BlockConfig<MicrosoftTeamsResponse> = {
   description: 'Read, write, and create messages',
   longDescription:
     'Integrate Microsoft Teams functionality to manage messages. Read content from existing messages and write to messages using OAuth authentication. Supports text content manipulation for message creation and editing.',
-  docsLink: 'https://docs.simstudio.ai/tools/microsoft_teams',
+  docsLink: 'https://docs.sim.ai/tools/microsoft_teams',
   category: 'tools',
   bgColor: '#E0E0E0',
   icon: MicrosoftTeamsIcon,
@@ -29,6 +24,7 @@ export const MicrosoftTeamsBlock: BlockConfig<MicrosoftTeamsResponse> = {
         { label: 'Read Channel Messages', id: 'read_channel' },
         { label: 'Write Channel Message', id: 'write_channel' },
       ],
+      value: () => 'read_chat',
     },
     {
       id: 'credential',
@@ -54,6 +50,7 @@ export const MicrosoftTeamsBlock: BlockConfig<MicrosoftTeamsResponse> = {
         'offline_access',
       ],
       placeholder: 'Select Microsoft account',
+      required: true,
     },
     {
       id: 'teamId',
@@ -64,6 +61,16 @@ export const MicrosoftTeamsBlock: BlockConfig<MicrosoftTeamsResponse> = {
       serviceId: 'microsoft-teams',
       requiredScopes: [],
       placeholder: 'Select a team',
+      mode: 'basic',
+      condition: { field: 'operation', value: ['read_channel', 'write_channel'] },
+    },
+    {
+      id: 'manualTeamId',
+      title: 'Team ID',
+      type: 'short-input',
+      layout: 'full',
+      placeholder: 'Enter team ID',
+      mode: 'advanced',
       condition: { field: 'operation', value: ['read_channel', 'write_channel'] },
     },
     {
@@ -75,6 +82,16 @@ export const MicrosoftTeamsBlock: BlockConfig<MicrosoftTeamsResponse> = {
       serviceId: 'microsoft-teams',
       requiredScopes: [],
       placeholder: 'Select a chat',
+      mode: 'basic',
+      condition: { field: 'operation', value: ['read_chat', 'write_chat'] },
+    },
+    {
+      id: 'manualChatId',
+      title: 'Chat ID',
+      type: 'short-input',
+      layout: 'full',
+      placeholder: 'Enter chat ID',
+      mode: 'advanced',
       condition: { field: 'operation', value: ['read_chat', 'write_chat'] },
     },
     {
@@ -86,6 +103,16 @@ export const MicrosoftTeamsBlock: BlockConfig<MicrosoftTeamsResponse> = {
       serviceId: 'microsoft-teams',
       requiredScopes: [],
       placeholder: 'Select a channel',
+      mode: 'basic',
+      condition: { field: 'operation', value: ['read_channel', 'write_channel'] },
+    },
+    {
+      id: 'manualChannelId',
+      title: 'Channel ID',
+      type: 'short-input',
+      layout: 'full',
+      placeholder: 'Enter channel ID',
+      mode: 'advanced',
       condition: { field: 'operation', value: ['read_channel', 'write_channel'] },
     },
     // Create-specific Fields
@@ -96,6 +123,7 @@ export const MicrosoftTeamsBlock: BlockConfig<MicrosoftTeamsResponse> = {
       layout: 'full',
       placeholder: 'Enter message content',
       condition: { field: 'operation', value: ['write_chat', 'write_channel'] },
+      required: true,
     },
   ],
   tools: {
@@ -121,7 +149,22 @@ export const MicrosoftTeamsBlock: BlockConfig<MicrosoftTeamsResponse> = {
         }
       },
       params: (params) => {
-        const { credential, operation, ...rest } = params
+        const {
+          credential,
+          operation,
+          teamId,
+          manualTeamId,
+          chatId,
+          manualChatId,
+          channelId,
+          manualChannelId,
+          ...rest
+        } = params
+
+        // Use the selected IDs or the manually entered ones
+        const effectiveTeamId = (teamId || manualTeamId || '').trim()
+        const effectiveChatId = (chatId || manualChatId || '').trim()
+        const effectiveChannelId = (channelId || manualChannelId || '').trim()
 
         // Build the parameters based on operation type
         const baseParams = {
@@ -131,27 +174,33 @@ export const MicrosoftTeamsBlock: BlockConfig<MicrosoftTeamsResponse> = {
 
         // For chat operations, we need chatId
         if (operation === 'read_chat' || operation === 'write_chat') {
-          if (!params.chatId) {
-            throw new Error('Chat ID is required for chat operations')
+          if (!effectiveChatId) {
+            throw new Error(
+              'Chat ID is required for chat operations. Please select a chat or enter a chat ID manually.'
+            )
           }
           return {
             ...baseParams,
-            chatId: params.chatId,
+            chatId: effectiveChatId,
           }
         }
 
         // For channel operations, we need teamId and channelId
         if (operation === 'read_channel' || operation === 'write_channel') {
-          if (!params.teamId) {
-            throw new Error('Team ID is required for channel operations')
+          if (!effectiveTeamId) {
+            throw new Error(
+              'Team ID is required for channel operations. Please select a team or enter a team ID manually.'
+            )
           }
-          if (!params.channelId) {
-            throw new Error('Channel ID is required for channel operations')
+          if (!effectiveChannelId) {
+            throw new Error(
+              'Channel ID is required for channel operations. Please select a channel or enter a channel ID manually.'
+            )
           }
           return {
             ...baseParams,
-            teamId: params.teamId,
-            channelId: params.channelId,
+            teamId: effectiveTeamId,
+            channelId: effectiveChannelId,
           }
         }
 
@@ -160,17 +209,20 @@ export const MicrosoftTeamsBlock: BlockConfig<MicrosoftTeamsResponse> = {
     },
   },
   inputs: {
-    operation: { type: 'string', required: true },
-    credential: { type: 'string', required: true },
-    messageId: { type: 'string', required: true },
-    chatId: { type: 'string', required: true },
-    channelId: { type: 'string', required: true },
-    teamId: { type: 'string', required: true },
-    content: { type: 'string', required: true },
+    operation: { type: 'string', description: 'Operation to perform' },
+    credential: { type: 'string', description: 'Microsoft Teams access token' },
+    messageId: { type: 'string', description: 'Message identifier' },
+    chatId: { type: 'string', description: 'Chat identifier' },
+    manualChatId: { type: 'string', description: 'Manual chat identifier' },
+    channelId: { type: 'string', description: 'Channel identifier' },
+    manualChannelId: { type: 'string', description: 'Manual channel identifier' },
+    teamId: { type: 'string', description: 'Team identifier' },
+    manualTeamId: { type: 'string', description: 'Manual team identifier' },
+    content: { type: 'string', description: 'Message content' },
   },
   outputs: {
-    content: 'string',
-    metadata: 'json',
-    updatedContent: 'boolean',
+    content: { type: 'string', description: 'Message content' },
+    metadata: { type: 'json', description: 'Message metadata' },
+    updatedContent: { type: 'boolean', description: 'Content update status' },
   },
 }

@@ -7,11 +7,13 @@ import { validateSeatAvailability } from '@/lib/billing/validation/seat-manageme
 import { sendEmail } from '@/lib/email/mailer'
 import { validateAndNormalizeEmail } from '@/lib/email/utils'
 import { env } from '@/lib/env'
-import { createLogger } from '@/lib/logs/console-logger'
+import { createLogger } from '@/lib/logs/console/logger'
 import { db } from '@/db'
 import { invitation, member, organization, user, userStats } from '@/db/schema'
 
 const logger = createLogger('OrganizationMembersAPI')
+
+export const dynamic = 'force-dynamic'
 
 /**
  * GET /api/organizations/[id]/members

@@ -1,29 +1,32 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { HelpCircle, LibraryBig, ScrollText, Settings, Shapes } from 'lucide-react'
+import { HelpCircle, LibraryBig, ScrollText, Search, Settings, Shapes } from 'lucide-react'
 import { useParams, usePathname, useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { Button, ScrollArea, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui'
 import { useSession } from '@/lib/auth-client'
-import { createLogger } from '@/lib/logs/console-logger'
+import { createLogger } from '@/lib/logs/console/logger'
+import { generateWorkspaceName } from '@/lib/naming'
 import { cn } from '@/lib/utils'
+import { useUserPermissionsContext } from '@/app/workspace/[workspaceId]/components/providers/workspace-permissions-provider'
+import { SearchModal } from '@/app/workspace/[workspaceId]/w/components/search-modal/search-modal'
+import {
+  CreateMenu,
+  FolderTree,
+  HelpModal,
+  LogsFilters,
+  SettingsModal,
+  Toolbar,
+  WorkspaceHeader,
+  WorkspaceSelector,
+} from '@/app/workspace/[workspaceId]/w/components/sidebar/components'
+import { InviteModal } from '@/app/workspace/[workspaceId]/w/components/sidebar/components/workspace-selector/components/invite-modal/invite-modal'
 import {
   getKeyboardShortcutText,
   useGlobalShortcuts,
 } from '@/app/workspace/[workspaceId]/w/hooks/use-keyboard-shortcuts'
 import { useWorkflowRegistry } from '@/stores/workflows/registry/store'
 import type { WorkflowMetadata } from '@/stores/workflows/registry/types'
-import { useUserPermissionsContext } from '../providers/workspace-permissions-provider'
-import { CreateMenu } from './components/create-menu/create-menu'
-import { FolderTree } from './components/folder-tree/folder-tree'
-import { HelpModal } from './components/help-modal/help-modal'
-import { SettingsModal } from './components/settings-modal/settings-modal'
-import { Toolbar } from './components/toolbar/toolbar'
-import { WorkspaceHeader } from './components/workspace-header/workspace-header'
-import { InviteModal } from './components/workspace-selector/components/invite-modal/invite-modal'
-import { WorkspaceSelector } from './components/workspace-selector/workspace-selector'
 
 const logger = createLogger('Sidebar')
 
@@ -51,6 +54,24 @@ interface Workspace {
   permissions?: 'admin' | 'write' | 'read' | null
 }
 
+/**
+ * Template data interface for search modal
+ */
+interface TemplateData {
+  id: string
+  title: string
+  description: string
+  author: string
+  usageCount: string
+  stars: number
+  icon: string
+  iconColor: string
+  state?: {
+    blocks?: Record<string, { type: string; name?: string }>
+  }
+  isStarred?: boolean
+}
+
 export function Sidebar() {
   useGlobalShortcuts()
 
@@ -67,11 +88,19 @@ export function Sidebar() {
 
   // Add state to prevent multiple simultaneous workflow creations
   const [isCreatingWorkflow, setIsCreatingWorkflow] = useState(false)
+  // Add state to prevent multiple simultaneous workspace creations
+  const [isCreatingWorkspace, setIsCreatingWorkspace] = useState(false)
+  // Add sidebar collapsed state
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const params = useParams()
   const workspaceId = params.workspaceId as string
   const workflowId = params.workflowId as string
   const pathname = usePathname()
   const router = useRouter()
+
+  // Template data for search modal
+  const [templates, setTemplates] = useState<TemplateData[]>([])
+  const [isTemplatesLoading, setIsTemplatesLoading] = useState(false)
 
   // Refs
   const workflowScrollAreaRef = useRef<HTMLDivElement>(null)
@@ -92,6 +121,7 @@ export function Sidebar() {
   const [activeWorkspace, setActiveWorkspace] = useState<Workspace | null>(null)
   const [isWorkspacesLoading, setIsWorkspacesLoading] = useState(true)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isLeaving, setIsLeaving] = useState(false)
 
   // Update activeWorkspace ref when state changes
   activeWorkspaceRef.current = activeWorkspace
@@ -101,6 +131,13 @@ export function Sidebar() {
     // Pattern: /workspace/[workspaceId]/w/[workflowId]
     const workflowPageRegex = /^\/workspace\/[^/]+\/w\/[^/]+$/
     return workflowPageRegex.test(pathname)
+  }, [pathname])
+
+  // Check if we're on the logs page
+  const isOnLogsPage = useMemo(() => {
+    // Pattern: /workspace/[workspaceId]/logs
+    const logsPageRegex = /^\/workspace\/[^/]+\/logs$/
+    return logsPageRegex.test(pathname)
   }, [pathname])
 
   /**
@@ -250,8 +287,19 @@ export function Sidebar() {
    * Handle create workspace
    */
   const handleCreateWorkspace = useCallback(async () => {
+    if (isCreatingWorkspace) {
+      logger.info('Workspace creation already in progress, ignoring request')
+      return
+    }
+
     try {
+      setIsCreatingWorkspace(true)
       logger.info('Creating new workspace')
+
+      // Generate workspace name using utility function
+      const workspaceName = await generateWorkspaceName()
+
+      logger.info(`Generated workspace name: ${workspaceName}`)
 
       const response = await fetch('/api/workspaces', {
         method: 'POST',
@@ -259,7 +307,7 @@ export function Sidebar() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          name: 'Untitled workspace',
+          name: workspaceName,
         }),
       })
 
@@ -280,8 +328,10 @@ export function Sidebar() {
       await switchWorkspace(newWorkspace)
     } catch (error) {
       logger.error('Error creating workspace:', error)
+    } finally {
+      setIsCreatingWorkspace(false)
     }
-  }, [refreshWorkspaceList, switchWorkspace])
+  }, [refreshWorkspaceList, switchWorkspace, isCreatingWorkspace])
 
   /**
    * Confirm delete workspace
@@ -337,6 +387,66 @@ export function Sidebar() {
   )
 
   /**
+   * Handle leave workspace
+   */
+  const handleLeaveWorkspace = useCallback(
+    async (workspaceToLeave: Workspace) => {
+      setIsLeaving(true)
+      try {
+        logger.info('Leaving workspace:', workspaceToLeave.id)
+
+        // Use the existing member removal API with current user's ID
+        const response = await fetch(`/api/workspaces/members/${sessionData?.user?.id}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            workspaceId: workspaceToLeave.id,
+          }),
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Failed to leave workspace')
+        }
+
+        logger.info('Left workspace successfully:', workspaceToLeave.id)
+
+        // Check if we're leaving the current workspace (either active or in URL)
+        const isLeavingCurrentWorkspace =
+          workspaceIdRef.current === workspaceToLeave.id ||
+          activeWorkspaceRef.current?.id === workspaceToLeave.id
+
+        if (isLeavingCurrentWorkspace) {
+          // For current workspace leaving, use full fetchWorkspaces with URL validation
+          logger.info(
+            'Leaving current workspace - using full workspace refresh with URL validation'
+          )
+          await fetchWorkspaces()
+
+          // If we left the active workspace, switch to the first available workspace
+          if (activeWorkspaceRef.current?.id === workspaceToLeave.id) {
+            const remainingWorkspaces = workspaces.filter((w) => w.id !== workspaceToLeave.id)
+            if (remainingWorkspaces.length > 0) {
+              await switchWorkspace(remainingWorkspaces[0])
+            }
+          }
+        } else {
+          // For non-current workspace leaving, just refresh the list without URL validation
+          logger.info('Leaving non-current workspace - using simple list refresh')
+          await refreshWorkspaceList()
+        }
+      } catch (error) {
+        logger.error('Error leaving workspace:', error)
+      } finally {
+        setIsLeaving(false)
+      }
+    },
+    [fetchWorkspaces, refreshWorkspaceList, workspaces, switchWorkspace, sessionData?.user?.id]
+  )
+
+  /**
    * Validate workspace exists before making API calls
    */
   const isWorkspaceValid = useCallback(async (workspaceId: string) => {
@@ -347,6 +457,60 @@ export function Sidebar() {
       return false
     }
   }, [])
+
+  /**
+   * Fetch popular templates for search modal
+   */
+  const fetchTemplates = useCallback(async () => {
+    setIsTemplatesLoading(true)
+    try {
+      // Fetch templates from API, ordered by views (most popular first)
+      const response = await fetch('/api/templates?limit=8&offset=0')
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch templates: ${response.status}`)
+      }
+
+      const apiResponse = await response.json()
+
+      // Map API response to TemplateData format
+      const fetchedTemplates: TemplateData[] =
+        apiResponse.data?.map((template: any) => ({
+          id: template.id,
+          title: template.name,
+          description: template.description || '',
+          author: template.author,
+          usageCount: formatUsageCount(template.views || 0),
+          stars: template.stars || 0,
+          icon: template.icon || 'FileText',
+          iconColor: template.color || '#6B7280',
+          state: template.state,
+          isStarred: template.isStarred || false,
+        })) || []
+
+      setTemplates(fetchedTemplates)
+      logger.info(`Templates loaded successfully: ${fetchedTemplates.length} templates`)
+    } catch (error) {
+      logger.error('Error fetching templates:', error)
+      // Set empty array on error
+      setTemplates([])
+    } finally {
+      setIsTemplatesLoading(false)
+    }
+  }, [])
+
+  /**
+   * Format usage count for display (e.g., 1500 -> "1.5k")
+   */
+  const formatUsageCount = (count: number): string => {
+    if (count >= 1000000) {
+      return `${(count / 1000000).toFixed(1)}m`
+    }
+    if (count >= 1000) {
+      return `${(count / 1000).toFixed(1)}k`
+    }
+    return count.toString()
+  }
 
   // Load workflows for the current workspace when workspaceId changes
   useEffect(() => {
@@ -368,6 +532,7 @@ export function Sidebar() {
     if (sessionData?.user?.id && !isInitializedRef.current) {
       isInitializedRef.current = true
       fetchWorkspaces()
+      fetchTemplates()
     }
   }, [sessionData?.user?.id]) // Removed fetchWorkspaces dependency
 
@@ -391,7 +556,7 @@ export function Sidebar() {
   const [showSettings, setShowSettings] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
   const [showInviteMembers, setShowInviteMembers] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
+  const [showSearchModal, setShowSearchModal] = useState(false)
 
   // Separate regular workflows from temporary marketplace workflows
   const { regularWorkflows, tempWorkflows } = useMemo(() => {
@@ -429,6 +594,29 @@ export function Sidebar() {
     return { regularWorkflows: regular, tempWorkflows: temp }
   }, [workflows, isLoading, workspaceId])
 
+  // Prepare workflows for search modal
+  const searchWorkflows = useMemo(() => {
+    if (isLoading) return []
+
+    const allWorkflows = [...regularWorkflows, ...tempWorkflows]
+    return allWorkflows.map((workflow) => ({
+      id: workflow.id,
+      name: workflow.name,
+      href: `/workspace/${workspaceId}/w/${workflow.id}`,
+      isCurrent: workflow.id === workflowId,
+    }))
+  }, [regularWorkflows, tempWorkflows, workspaceId, workflowId, isLoading])
+
+  // Prepare workspaces for search modal (include all workspaces)
+  const searchWorkspaces = useMemo(() => {
+    return workspaces.map((workspace) => ({
+      id: workspace.id,
+      name: workspace.name,
+      href: `/workspace/${workspace.id}/w`,
+      isCurrent: workspace.id === workspaceId,
+    }))
+  }, [workspaces, workspaceId])
+
   // Create workflow handler
   const handleCreateWorkflow = async (folderId?: string): Promise<string> => {
     if (isCreatingWorkflow) {
@@ -456,6 +644,15 @@ export function Sidebar() {
     setIsWorkspaceSelectorVisible((prev) => !prev)
   }
 
+  // Toggle sidebar collapsed state
+  const toggleSidebarCollapsed = () => {
+    setIsSidebarCollapsed((prev) => !prev)
+    // Hide workspace selector when collapsing sidebar
+    if (!isSidebarCollapsed) {
+      setIsWorkspaceSelectorVisible(false)
+    }
+  }
+
   // Calculate dynamic positions for floating elements
   const calculateFloatingPositions = useCallback(() => {
     const { CONTAINER_PADDING, WORKSPACE_HEADER, SEARCH, WORKFLOW_SELECTOR, WORKSPACE_SELECTOR } =
@@ -467,13 +664,15 @@ export function Sidebar() {
     // Add workspace header
     currentTop += WORKSPACE_HEADER + SIDEBAR_GAP
 
-    // Add workspace selector if visible
-    if (isWorkspaceSelectorVisible) {
+    // Add workspace selector if visible and not collapsed
+    if (isWorkspaceSelectorVisible && !isSidebarCollapsed) {
       currentTop += WORKSPACE_SELECTOR + SIDEBAR_GAP
     }
 
-    // Add search
-    currentTop += SEARCH + SIDEBAR_GAP
+    // Add search (if not collapsed)
+    if (!isSidebarCollapsed) {
+      currentTop += SEARCH + SIDEBAR_GAP
+    }
 
     // Add workflow selector
     currentTop += WORKFLOW_SELECTOR - 4
@@ -488,9 +687,40 @@ export function Sidebar() {
       toolbarTop,
       navigationBottom,
     }
-  }, [isWorkspaceSelectorVisible])
+  }, [isWorkspaceSelectorVisible, isSidebarCollapsed])
 
   const { toolbarTop, navigationBottom } = calculateFloatingPositions()
+
+  // Add keyboard shortcut for search modal (Cmd+K)
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Don't trigger if user is typing in an input, textarea, or contenteditable element
+      const activeElement = document.activeElement
+      const isEditableElement =
+        activeElement instanceof HTMLInputElement ||
+        activeElement instanceof HTMLTextAreaElement ||
+        activeElement?.hasAttribute('contenteditable')
+
+      if (isEditableElement) return
+
+      // Cmd/Ctrl + K - Open search modal
+      if (
+        event.key.toLowerCase() === 'k' &&
+        ((event.metaKey &&
+          typeof navigator !== 'undefined' &&
+          navigator.platform.toUpperCase().indexOf('MAC') >= 0) ||
+          (event.ctrlKey &&
+            (typeof navigator === 'undefined' ||
+              navigator.platform.toUpperCase().indexOf('MAC') < 0)))
+      ) {
+        event.preventDefault()
+        setShowSearchModal(true)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   // Navigation items with their respective actions
   const navigationItems = [
@@ -519,7 +749,6 @@ export function Sidebar() {
       icon: LibraryBig,
       href: `/workspace/${workspaceId}/knowledge`,
       tooltip: 'Knowledge',
-      shortcut: getKeyboardShortcutText('K', true, true),
       active: pathname === `/workspace/${workspaceId}/knowledge`,
     },
     {
@@ -527,7 +756,6 @@ export function Sidebar() {
       icon: Shapes,
       href: `/workspace/${workspaceId}/templates`,
       tooltip: 'Templates',
-      shortcut: getKeyboardShortcutText('T', true, true),
       active: pathname === `/workspace/${workspaceId}/templates`,
     },
   ]
@@ -546,6 +774,7 @@ export function Sidebar() {
               onCreateWorkflow={handleCreateWorkflow}
               isWorkspaceSelectorVisible={isWorkspaceSelectorVisible}
               onToggleWorkspaceSelector={toggleWorkspaceSelector}
+              onToggleSidebar={toggleSidebarCollapsed}
               activeWorkspace={activeWorkspace}
               isWorkspacesLoading={isWorkspacesLoading}
               updateWorkspaceName={updateWorkspaceName}
@@ -553,44 +782,55 @@ export function Sidebar() {
           </div>
 
           {/* 2. Workspace Selector - Conditionally rendered */}
-          {isWorkspaceSelectorVisible && (
-            <div className='pointer-events-auto flex-shrink-0'>
-              <WorkspaceSelector
-                workspaces={workspaces}
-                activeWorkspace={activeWorkspace}
-                isWorkspacesLoading={isWorkspacesLoading}
-                onWorkspaceUpdate={refreshWorkspaceList}
-                onSwitchWorkspace={switchWorkspace}
-                onCreateWorkspace={handleCreateWorkspace}
-                onDeleteWorkspace={confirmDeleteWorkspace}
-                isDeleting={isDeleting}
-              />
-            </div>
-          )}
+          <div
+            className={`pointer-events-auto flex-shrink-0 ${
+              !isWorkspaceSelectorVisible || isSidebarCollapsed ? 'hidden' : ''
+            }`}
+          >
+            <WorkspaceSelector
+              workspaces={workspaces}
+              activeWorkspace={activeWorkspace}
+              isWorkspacesLoading={isWorkspacesLoading}
+              onWorkspaceUpdate={refreshWorkspaceList}
+              onSwitchWorkspace={switchWorkspace}
+              onCreateWorkspace={handleCreateWorkspace}
+              onDeleteWorkspace={confirmDeleteWorkspace}
+              onLeaveWorkspace={handleLeaveWorkspace}
+              isDeleting={isDeleting}
+              isLeaving={isLeaving}
+              isCreating={isCreatingWorkspace}
+            />
+          </div>
 
           {/* 3. Search */}
-          {/* <div className='pointer-events-auto flex-shrink-0'>
-            <div className='flex h-12 items-center gap-2 rounded-[14px] border bg-card pr-2 pl-3 shadow-xs'>
+          <div
+            className={`pointer-events-auto flex-shrink-0 ${isSidebarCollapsed ? 'hidden' : ''}`}
+          >
+            <button
+              onClick={() => setShowSearchModal(true)}
+              className='flex h-12 w-full cursor-pointer items-center gap-2 rounded-[14px] border bg-card pr-[10px] pl-3 shadow-xs transition-colors hover:bg-muted/50'
+            >
               <Search className='h-4 w-4 text-muted-foreground' strokeWidth={2} />
-              <Input
-                placeholder='Search anything'
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className='h-8 flex-1 border-0 bg-transparent px-0 font-normal text-base text-muted-foreground leading-none placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0'
-              />
+              <span className='flex h-8 flex-1 items-center px-0 text-muted-foreground text-sm leading-none'>
+                Search anything
+              </span>
               <kbd className='flex h-6 w-8 items-center justify-center rounded-[5px] border border-border bg-background font-mono text-[#CDCDCD] text-xs dark:text-[#454545]'>
                 <span className='flex items-center justify-center gap-[1px] pt-[1px]'>
                   <span className='text-lg'>⌘</span>
                   <span className='text-xs'>K</span>
                 </span>
               </kbd>
-            </div>
-          </div> */}
+            </button>
+          </div>
 
           {/* 4. Workflow Selector */}
-          <div className='pointer-events-auto relative h-[272px] flex-shrink-0 rounded-[14px] border bg-card shadow-xs'>
+          <div
+            className={`pointer-events-auto relative h-[212px] flex-shrink-0 rounded-[14px] border bg-card shadow-xs ${
+              isSidebarCollapsed ? 'hidden' : ''
+            }`}
+          >
             <div className='px-2'>
-              <ScrollArea ref={workflowScrollAreaRef} className='h-[270px]' hideScrollbar={true}>
+              <ScrollArea ref={workflowScrollAreaRef} className='h-[210px]' hideScrollbar={true}>
                 <FolderTree
                   regularWorkflows={regularWorkflows}
                   marketplaceWorkflows={tempWorkflows}
@@ -614,20 +854,33 @@ export function Sidebar() {
       </aside>
 
       {/* Floating Toolbar - Only on workflow pages */}
-      {isOnWorkflowPage && (
-        <div
-          className='pointer-events-auto fixed left-4 z-50 w-56 rounded-[14px] border bg-card shadow-xs'
-          style={{
-            top: `${toolbarTop}px`,
-            bottom: `${navigationBottom + 42 + 12}px`, // Navigation height + gap
-          }}
-        >
-          <Toolbar
-            userPermissions={userPermissions}
-            isWorkspaceSelectorVisible={isWorkspaceSelectorVisible}
-          />
-        </div>
-      )}
+      <div
+        className={`pointer-events-auto fixed left-4 z-50 w-56 rounded-[14px] border bg-card shadow-xs ${
+          !isOnWorkflowPage || isSidebarCollapsed ? 'hidden' : ''
+        }`}
+        style={{
+          top: `${toolbarTop}px`,
+          bottom: `${navigationBottom + 42 + 12}px`, // Navigation height + gap
+        }}
+      >
+        <Toolbar
+          userPermissions={userPermissions}
+          isWorkspaceSelectorVisible={isWorkspaceSelectorVisible}
+        />
+      </div>
+
+      {/* Floating Logs Filters - Only on logs page */}
+      <div
+        className={`pointer-events-auto fixed left-4 z-50 w-56 rounded-[14px] border bg-card shadow-xs ${
+          !isOnLogsPage || isSidebarCollapsed ? 'hidden' : ''
+        }`}
+        style={{
+          top: `${toolbarTop}px`,
+          bottom: `${navigationBottom + 42 + 12}px`, // Navigation height + gap
+        }}
+      >
+        <LogsFilters />
+      </div>
 
       {/* Floating Navigation - Always visible */}
       <div
@@ -645,6 +898,15 @@ export function Sidebar() {
       <SettingsModal open={showSettings} onOpenChange={setShowSettings} />
       <HelpModal open={showHelp} onOpenChange={setShowHelp} />
       <InviteModal open={showInviteMembers} onOpenChange={setShowInviteMembers} />
+      <SearchModal
+        open={showSearchModal}
+        onOpenChange={setShowSearchModal}
+        templates={templates}
+        workflows={searchWorkflows}
+        workspaces={searchWorkspaces}
+        loading={isTemplatesLoading}
+        isOnWorkflowPage={isOnWorkflowPage}
+      />
     </>
   )
 }

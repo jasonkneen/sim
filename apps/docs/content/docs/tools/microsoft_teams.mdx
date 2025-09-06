@@ -92,7 +92,7 @@ With Microsoft Teams, you can:
 - **Access across devices**: Use Teams on desktop, web, and mobile with cloud-synced conversations  
 - **Secure communication**: Leverage enterprise-grade security and compliance features
 
-In Sim Studio, the Microsoft Teams integration enables your agents to interact directly with chat messages programmatically. This allows for powerful automation scenarios such as sending updates, posting alerts, coordinating tasks, and responding to conversations in real time. Your agents can write new messages to chats or channels, update content based on workflow data, and engage with users where collaboration happens. By integrating Sim Studio with Microsoft Teams, you bridge the gap between intelligent workflows and team communication — empowering your agents to streamline collaboration, automate communication tasks, and keep your teams aligned.
+In Sim, the Microsoft Teams integration enables your agents to interact directly with chat messages programmatically. This allows for powerful automation scenarios such as sending updates, posting alerts, coordinating tasks, and responding to conversations in real time. Your agents can write new messages to chats or channels, update content based on workflow data, and engage with users where collaboration happens. By integrating Sim with Microsoft Teams, you bridge the gap between intelligent workflows and team communication — empowering your agents to streamline collaboration, automate communication tasks, and keep your teams aligned.
 {/* MANUAL-CONTENT-END */}
 
 
@@ -117,14 +117,11 @@ Read content from a Microsoft Teams chat
 
 #### Output
 
-| Parameter | Type |
-| --------- | ---- |
-| `content` | string |
-| `metadata` | string |
-| `messageCount` | string |
-| `messages` | string |
-| `totalAttachments` | string |
-| `attachmentTypes` | string |
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `content` | string | Message content |
+| `metadata` | json | Message metadata |
+| `updatedContent` | boolean | Content update status |
 
 ### `microsoft_teams_write_chat`
 
@@ -140,10 +137,11 @@ Write or update content in a Microsoft Teams chat
 
 #### Output
 
-| Parameter | Type |
-| --------- | ---- |
-| `updatedContent` | string |
-| `metadata` | string |
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `content` | string | Message content |
+| `metadata` | json | Message metadata |
+| `updatedContent` | boolean | Content update status |
 
 ### `microsoft_teams_read_channel`
 
@@ -159,15 +157,11 @@ Read content from a Microsoft Teams channel
 
 #### Output
 
-| Parameter | Type |
-| --------- | ---- |
-| `content` | string |
-| `metadata` | string |
-| `channelId` | string |
-| `messageCount` | string |
-| `messages` | string |
-| `totalAttachments` | string |
-| `attachmentTypes` | string |
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `content` | string | Message content |
+| `metadata` | json | Message metadata |
+| `updatedContent` | boolean | Content update status |
 
 ### `microsoft_teams_write_channel`
 
@@ -184,30 +178,12 @@ Write or send a message to a Microsoft Teams channel
 
 #### Output
 
-| Parameter | Type |
-| --------- | ---- |
-| `updatedContent` | string |
-| `metadata` | string |
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `content` | string | Message content |
+| `metadata` | json | Message metadata |
+| `updatedContent` | boolean | Content update status |
 
-
-
-## Block Configuration
-
-### Input
-
-| Parameter | Type | Required | Description | 
-| --------- | ---- | -------- | ----------- | 
-| `operation` | string | Yes | Operation |
-
-
-
-### Outputs
-
-| Output | Type | Description |
-| ------ | ---- | ----------- |
-| `content` | string | content output from the block |
-| `metadata` | json | metadata output from the block |
-| `updatedContent` | boolean | updatedContent output from the block |
 
 
 ## Notes

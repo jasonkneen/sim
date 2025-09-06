@@ -2,20 +2,21 @@
 
 import { type RefObject, useCallback, useEffect, useRef, useState } from 'react'
 import { v4 as uuidv4 } from 'uuid'
-import { createLogger } from '@/lib/logs/console-logger'
+import { createLogger } from '@/lib/logs/console/logger'
 import { noop } from '@/lib/utils'
 import { getFormattedGitHubStars } from '@/app/(landing)/actions/github'
-import EmailAuth from './components/auth/email/email-auth'
-import PasswordAuth from './components/auth/password/password-auth'
-import { ChatErrorState } from './components/error-state/error-state'
-import { ChatHeader } from './components/header/header'
-import { ChatInput } from './components/input/input'
-import { ChatLoadingState } from './components/loading-state/loading-state'
-import type { ChatMessage } from './components/message/message'
-import { ChatMessageContainer } from './components/message-container/message-container'
-import { VoiceInterface } from './components/voice-interface/voice-interface'
-import { useAudioStreaming } from './hooks/use-audio-streaming'
-import { useChatStreaming } from './hooks/use-chat-streaming'
+import {
+  ChatErrorState,
+  ChatHeader,
+  ChatInput,
+  ChatLoadingState,
+  type ChatMessage,
+  ChatMessageContainer,
+  EmailAuth,
+  PasswordAuth,
+  VoiceInterface,
+} from '@/app/chat/[subdomain]/components'
+import { useAudioStreaming, useChatStreaming } from '@/app/chat/[subdomain]/hooks'
 
 const logger = createLogger('ChatClient')
 
@@ -29,6 +30,7 @@ interface ChatConfig {
   customizations: {
     primaryColor?: string
     logoUrl?: string
+    imageUrl?: string
     welcomeMessage?: string
     headerText?: string
   }
@@ -269,6 +271,8 @@ export default function ChatClient({ subdomain }: { subdomain: string }) {
     const messageToSend = messageParam ?? inputValue
     if (!messageToSend.trim() || isLoading) return
 
+    logger.info('Sending message:', { messageToSend, isVoiceInput, conversationId })
+
     // Reset userHasScrolled when sending a new message
     setUserHasScrolled(false)
 
@@ -305,6 +309,8 @@ export default function ChatClient({ subdomain }: { subdomain: string }) {
         conversationId,
       }
 
+      logger.info('API payload:', payload)
+
       const response = await fetch(`/api/chat/${subdomain}`, {
         method: 'POST',
         headers: {
@@ -321,6 +327,7 @@ export default function ChatClient({ subdomain }: { subdomain: string }) {
 
       if (!response.ok) {
         const errorData = await response.json()
+        logger.error('API error response:', errorData)
         throw new Error(errorData.error || 'Failed to get response')
       }
 
@@ -333,6 +340,8 @@ export default function ChatClient({ subdomain }: { subdomain: string }) {
       const audioHandler = shouldPlayAudio
         ? createAudioStreamHandler(streamTextToAudio, DEFAULT_VOICE_SETTINGS.voiceId)
         : undefined
+
+      logger.info('Starting to handle streamed response:', { shouldPlayAudio })
 
       await handleStreamedResponse(
         response,
@@ -405,6 +414,7 @@ export default function ChatClient({ subdomain }: { subdomain: string }) {
   // Handle voice transcript from voice-first interface
   const handleVoiceTranscript = useCallback(
     (transcript: string) => {
+      logger.info('Received voice transcript:', transcript)
       handleSendMessage(transcript, true)
     },
     [handleSendMessage]

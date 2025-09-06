@@ -2,10 +2,10 @@ import { and, eq, or } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
 import { env } from '@/lib/env'
-import { createLogger } from '@/lib/logs/console-logger'
+import { createLogger } from '@/lib/logs/console/logger'
 import { loadWorkflowFromNormalizedTables } from '@/lib/workflows/db-helpers'
-import * as schema from '../../db/schema'
-import { workflow, workflowBlocks, workflowEdges, workflowSubflows } from '../../db/schema'
+import * as schema from '@/db/schema'
+import { workflow, workflowBlocks, workflowEdges, workflowSubflows } from '@/db/schema'
 
 const logger = createLogger('SocketDatabase')
 
@@ -14,11 +14,11 @@ const connectionString = env.POSTGRES_URL ?? env.DATABASE_URL
 const socketDb = drizzle(
   postgres(connectionString, {
     prepare: false,
-    idle_timeout: 10, // Shorter idle timeout for socket operations
-    connect_timeout: 20, // Increase connection timeout for socket operations
-    max: 2, // Very small pool for socket server to avoid exhausting Supabase limit
-    onnotice: () => {}, // Disable notices
-    debug: false, // Disable debug for socket operations
+    idle_timeout: 10,
+    connect_timeout: 20,
+    max: 25,
+    onnotice: () => {},
+    debug: false,
   }),
   { schema }
 )
@@ -130,7 +130,6 @@ export async function getWorkflowState(workflowId: string) {
       const finalState = {
         // Default values for expected properties
         deploymentStatuses: {},
-        hasActiveSchedule: false,
         hasActiveWebhook: false,
         // Preserve any existing state properties
         ...existingState,
@@ -238,7 +237,6 @@ async function handleBlockOperationTx(
 
       logger.debug(`[SERVER] Adding block: ${payload.type} (${payload.id})`, {
         isSubflowType: isSubflowBlockType(payload.type),
-        payload,
       })
 
       // Extract parentId and extent from payload.data if they exist there, otherwise from payload directly

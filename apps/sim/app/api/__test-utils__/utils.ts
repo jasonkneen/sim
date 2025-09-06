@@ -279,12 +279,7 @@ export function mockExecutionDependencies() {
     }
   })
 
-  vi.mock('@/lib/logs/execution-logger', () => ({
-    persistExecutionLogs: vi.fn().mockResolvedValue(undefined),
-    persistExecutionError: vi.fn().mockResolvedValue(undefined),
-  }))
-
-  vi.mock('@/lib/logs/trace-spans', () => ({
+  vi.mock('@/lib/logs/execution/trace-spans/trace-spans', () => ({
     buildTraceSpans: vi.fn().mockReturnValue({
       traceSpans: [],
       totalDuration: 100,
@@ -380,8 +375,7 @@ export function mockWorkflowAccessValidation(shouldSucceed = true) {
 
 export async function getMockedDependencies() {
   const utilsModule = await import('@/lib/utils')
-  const logsModule = await import('@/lib/logs/execution-logger')
-  const traceSpansModule = await import('@/lib/logs/trace-spans')
+  const traceSpansModule = await import('@/lib/logs/execution/trace-spans/trace-spans')
   const workflowUtilsModule = await import('@/lib/workflows/utils')
   const executorModule = await import('@/executor')
   const serializerModule = await import('@/serializer')
@@ -389,8 +383,6 @@ export async function getMockedDependencies() {
 
   return {
     decryptSecret: utilsModule.decryptSecret,
-    persistExecutionLogs: logsModule.persistExecutionLogs,
-    persistExecutionError: logsModule.persistExecutionError,
     buildTraceSpans: traceSpansModule.buildTraceSpans,
     updateWorkflowRunCounts: workflowUtilsModule.updateWorkflowRunCounts,
     Executor: executorModule.Executor,
@@ -647,6 +639,15 @@ export function mockKnowledgeSchemas() {
       tag7: 'tag7',
       createdAt: 'created_at',
     },
+    permissions: {
+      id: 'permission_id',
+      userId: 'user_id',
+      entityType: 'entity_type',
+      entityId: 'entity_id',
+      permissionType: 'permission_type',
+      createdAt: 'created_at',
+      updatedAt: 'updated_at',
+    },
   }))
 }
 
@@ -654,7 +655,7 @@ export function mockKnowledgeSchemas() {
  * Mock console logger
  */
 export function mockConsoleLogger() {
-  vi.doMock('@/lib/logs/console-logger', () => ({
+  vi.doMock('@/lib/logs/console/logger', () => ({
     createLogger: vi.fn().mockReturnValue(mockLogger),
   }))
 }
@@ -783,6 +784,10 @@ export function createStorageProviderMocks(options: StorageProviderMockOptions =
         bucket: 'test-s3-kb-bucket',
         region: 'us-east-1',
       },
+      S3_CHAT_CONFIG: {
+        bucket: 'test-s3-chat-bucket',
+        region: 'us-east-1',
+      },
       BLOB_CONFIG: {
         accountName: 'testaccount',
         accountKey: 'testkey',
@@ -792,6 +797,11 @@ export function createStorageProviderMocks(options: StorageProviderMockOptions =
         accountName: 'testaccount',
         accountKey: 'testkey',
         containerName: 'test-kb-container',
+      },
+      BLOB_CHAT_CONFIG: {
+        accountName: 'testaccount',
+        accountKey: 'testkey',
+        containerName: 'test-chat-container',
       },
     }))
 
@@ -808,7 +818,7 @@ export function createStorageProviderMocks(options: StorageProviderMockOptions =
       }),
     }))
   } else if (provider === 'blob') {
-    const baseUrl = presignedUrl.replace('?sas-token-string', '')
+    const baseUrl = 'https://testaccount.blob.core.windows.net/test-container'
     const mockBlockBlobClient = {
       url: baseUrl,
     }
@@ -839,6 +849,11 @@ export function createStorageProviderMocks(options: StorageProviderMockOptions =
         accountName: 'testaccount',
         accountKey: 'testkey',
         containerName: 'test-kb-container',
+      },
+      BLOB_CHAT_CONFIG: {
+        accountName: 'testaccount',
+        accountKey: 'testkey',
+        containerName: 'test-chat-container',
       },
     }))
 

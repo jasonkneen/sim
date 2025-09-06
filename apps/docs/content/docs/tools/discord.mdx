@@ -39,11 +39,11 @@ With a Discord account or bot, you can:
 - **Get server**: Get information about a specific server
 - **Get user**: Get information about a specific user
 
-In Sim Studio, the Discord integration enables your agents to access and leverage your organization's Discord servers. Agents can retrieve information from Discord channels, search for specific users, get server information, and send messages. This allows your workflows to integrate with your Discord communities, automate notifications, and create interactive experiences.
+In Sim, the Discord integration enables your agents to access and leverage your organization's Discord servers. Agents can retrieve information from Discord channels, search for specific users, get server information, and send messages. This allows your workflows to integrate with your Discord communities, automate notifications, and create interactive experiences.
 
 > **Important:** To read message content, your Discord bot needs the "Message Content Intent" enabled in the Discord Developer Portal. Without this permission, you'll still receive message metadata but the content field will appear empty.
 
-Discord components in Sim Studio use efficient lazy loading, only fetching data when needed to minimize API calls and prevent rate limiting. Token refreshing happens automatically in the background to maintain your connection.
+Discord components in Sim use efficient lazy loading, only fetching data when needed to minimize API calls and prevent rate limiting. Token refreshing happens automatically in the background to maintain your connection.
 
 ### Setting Up Your Discord Bot
 
@@ -78,9 +78,10 @@ Send a message to a Discord channel
 
 #### Output
 
-| Parameter | Type |
-| --------- | ---- |
-| `message` | string |
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `message` | string | Message content |
+| `data` | any | Response data |
 
 ### `discord_get_messages`
 
@@ -96,9 +97,10 @@ Retrieve messages from a Discord channel
 
 #### Output
 
-| Parameter | Type |
-| --------- | ---- |
-| `message` | string |
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `message` | string | Message content |
+| `data` | any | Response data |
 
 ### `discord_get_server`
 
@@ -113,9 +115,10 @@ Retrieve information about a Discord server (guild)
 
 #### Output
 
-| Parameter | Type |
-| --------- | ---- |
-| `message` | string |
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `message` | string | Message content |
+| `data` | any | Response data |
 
 ### `discord_get_user`
 
@@ -130,28 +133,11 @@ Retrieve information about a Discord user
 
 #### Output
 
-| Parameter | Type |
-| --------- | ---- |
-| `message` | string |
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `message` | string | Message content |
+| `data` | any | Response data |
 
-
-
-## Block Configuration
-
-### Input
-
-| Parameter | Type | Required | Description | 
-| --------- | ---- | -------- | ----------- | 
-| `operation` | string | Yes | Operation |
-
-
-
-### Outputs
-
-| Output | Type | Description |
-| ------ | ---- | ----------- |
-| `message` | string | message output from the block |
-| `data` | any | data output from the block |
 
 
 ## Notes

@@ -1,11 +1,15 @@
-import { env } from '@/lib/env'
-import { createLogger } from '@/lib/logs/console-logger'
+import { createLogger } from '@/lib/logs/console/logger'
+import { getBaseUrl } from '@/lib/urls/utils'
 import { useCustomToolsStore } from '@/stores/custom-tools/store'
 import { useEnvironmentStore } from '@/stores/settings/environment/store'
-import { docsSearchTool } from './docs/search'
-import { tools } from './registry'
-import type { TableRow, ToolConfig, ToolResponse } from './types'
-import { getUserWorkflowTool } from './workflow/get-yaml'
+import { editWorkflowTool } from '@/tools/blocks/edit-workflow'
+import { getAllBlocksTool } from '@/tools/blocks/get-all'
+import { getBlockMetadataTool } from '@/tools/blocks/get-metadata'
+import { getYamlStructureTool } from '@/tools/blocks/get-yaml-structure'
+import { docsSearchTool } from '@/tools/docs/search'
+import { tools } from '@/tools/registry'
+import type { TableRow, ToolConfig, ToolResponse } from '@/tools/types'
+import { getUserWorkflowTool } from '@/tools/workflow/get-yaml'
 
 const logger = createLogger('ToolsUtils')
 
@@ -13,6 +17,15 @@ const logger = createLogger('ToolsUtils')
 const internalTools: Record<string, ToolConfig> = {
   docs_search_internal: docsSearchTool,
   get_user_workflow: getUserWorkflowTool,
+  get_blocks_and_tools: getAllBlocksTool,
+  get_blocks_metadata: getBlockMetadataTool,
+  get_yaml_structure: getYamlStructureTool,
+  edit_workflow: editWorkflowTool,
+}
+
+// Export the list of internal tool IDs for filtering purposes
+export const getInternalToolIds = (): Set<string> => {
+  return new Set(Object.keys(internalTools))
 }
 
 /**
@@ -152,22 +165,49 @@ export async function executeRequest(
 }
 
 /**
- * Validates the tool and its parameters
+ * Formats a parameter name for user-friendly error messages
+ * Converts parameter names and descriptions to more readable format
  */
-export function validateToolRequest(
+function formatParameterNameForError(paramName: string): string {
+  // Split camelCase and snake_case/kebab-case into words, then capitalize first letter of each word
+  return paramName
+    .split(/(?=[A-Z])|[_-]/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ')
+}
+
+/**
+ * Validates required parameters after LLM and user params have been merged
+ * This is the final validation before tool execution - ensures all required
+ * user-or-llm parameters are present after the merge process
+ */
+export function validateRequiredParametersAfterMerge(
   toolId: string,
   tool: ToolConfig | undefined,
-  params: Record<string, any>
+  params: Record<string, any>,
+  parameterNameMap?: Record<string, string>
 ): void {
   if (!tool) {
     throw new Error(`Tool not found: ${toolId}`)
   }
 
-  // Ensure all required parameters for tool call are provided
-  // Note: user-only parameters are not checked here as they're optional
+  // Validate all required user-or-llm parameters after merge
+  // user-only parameters should have been validated earlier during serialization
   for (const [paramName, paramConfig] of Object.entries(tool.params)) {
-    if (paramConfig.visibility === 'user-or-llm' && !(paramName in params)) {
-      throw new Error(`Parameter "${paramName}" is required for ${toolId} but was not provided`)
+    if (
+      (paramConfig as any).visibility === 'user-or-llm' &&
+      paramConfig.required &&
+      (!(paramName in params) ||
+        params[paramName] === null ||
+        params[paramName] === undefined ||
+        params[paramName] === '')
+    ) {
+      // Create a more user-friendly error message
+      const toolName = tool.name || toolId
+      const friendlyParamName =
+        parameterNameMap?.[paramName] || formatParameterNameForError(paramName)
+      throw new Error(`"${friendlyParamName}" is required for ${toolName}`)
     }
   }
 }
@@ -453,7 +493,7 @@ async function getCustomTool(
   const identifier = customToolId.replace('custom_', '')
 
   try {
-    const baseUrl = env.NEXT_PUBLIC_APP_URL || ''
+    const baseUrl = getBaseUrl()
     const url = new URL('/api/tools/custom', baseUrl)
 
     // Add workflowId as a query parameter if available

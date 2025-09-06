@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { createLogger } from '@/lib/logs/console-logger'
+import { createLogger } from '@/lib/logs/console/logger'
 
 const logger = createLogger('KnowledgeStore')
 
@@ -127,7 +127,7 @@ interface KnowledgeStore {
     documentId: string,
     options?: { search?: string; limit?: number; offset?: number }
   ) => Promise<ChunkData[]>
-  getKnowledgeBasesList: () => Promise<KnowledgeBaseData[]>
+  getKnowledgeBasesList: (workspaceId?: string) => Promise<KnowledgeBaseData[]>
   refreshDocuments: (
     knowledgeBaseId: string,
     options?: { search?: string; limit?: number; offset?: number }
@@ -422,7 +422,7 @@ export const useKnowledgeStore = create<KnowledgeStore>((set, get) => ({
     }
   },
 
-  getKnowledgeBasesList: async () => {
+  getKnowledgeBasesList: async (workspaceId?: string) => {
     const state = get()
 
     // Return cached list if we have already loaded it before (prevents infinite loops when empty)
@@ -444,7 +444,8 @@ export const useKnowledgeStore = create<KnowledgeStore>((set, get) => ({
     try {
       set({ loadingKnowledgeBasesList: true })
 
-      const response = await fetch('/api/knowledge', {
+      const url = workspaceId ? `/api/knowledge?workspaceId=${workspaceId}` : '/api/knowledge'
+      const response = await fetch(url, {
         signal: abortController.signal,
         headers: {
           'Content-Type': 'application/json',

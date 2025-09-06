@@ -1,11 +1,11 @@
-import { createLogger } from '@/lib/logs/console-logger'
-import type { ToolConfig } from '../types'
+import { createLogger } from '@/lib/logs/console/logger'
 import type {
   DiscordAPIError,
   DiscordMessage,
   DiscordSendMessageParams,
   DiscordSendMessageResponse,
-} from './types'
+} from '@/tools/discord/types'
+import type { ToolConfig } from '@/tools/types'
 
 const logger = createLogger('DiscordSendMessage')
 
@@ -68,7 +68,7 @@ export const discordSendMessageTool: ToolConfig<
       }
 
       if (!body.content) {
-        body.content = 'Message sent from Sim Studio'
+        body.content = 'Message sent from Sim'
       }
 
       return body

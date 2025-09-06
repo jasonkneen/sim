@@ -12,11 +12,14 @@ import {
 } from 'lucide-react'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
-import { createLogger } from '@/lib/logs/console-logger'
+import { createLogger } from '@/lib/logs/console/logger'
+import {
+  CodeDisplay,
+  JSONView,
+} from '@/app/workspace/[workspaceId]/w/[workflowId]/components/panel/components/console/components'
 import { getBlock } from '@/blocks'
 import type { ConsoleEntry as ConsoleEntryType } from '@/stores/panel/console/types'
-import { CodeDisplay } from '../code-display/code-display'
-import { JSONView } from '../json-view/json-view'
+import { useGeneralStore } from '@/stores/settings/general/store'
 
 const logger = createLogger('ConsoleEntry')
 
@@ -164,7 +167,8 @@ const ImagePreview = ({
 }
 
 export function ConsoleEntry({ entry, consoleWidth }: ConsoleEntryProps) {
-  const [isExpanded, setIsExpanded] = useState(true) // Default expanded
+  const isConsoleExpandedByDefault = useGeneralStore((state) => state.isConsoleExpandedByDefault)
+  const [isExpanded, setIsExpanded] = useState(isConsoleExpandedByDefault)
   const [showCopySuccess, setShowCopySuccess] = useState(false)
   const [showInput, setShowInput] = useState(false) // State for input/output toggle
   const [isPlaying, setIsPlaying] = useState(false)

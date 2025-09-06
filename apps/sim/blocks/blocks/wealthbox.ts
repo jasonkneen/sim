@@ -1,8 +1,6 @@
 import { WealthboxIcon } from '@/components/icons'
-import type { WealthboxReadResponse, WealthboxWriteResponse } from '@/tools/wealthbox/types'
-import type { BlockConfig } from '../types'
-
-type WealthboxResponse = WealthboxReadResponse | WealthboxWriteResponse
+import type { BlockConfig } from '@/blocks/types'
+import type { WealthboxResponse } from '@/tools/wealthbox/types'
 
 export const WealthboxBlock: BlockConfig<WealthboxResponse> = {
   type: 'wealthbox',
@@ -10,7 +8,7 @@ export const WealthboxBlock: BlockConfig<WealthboxResponse> = {
   description: 'Interact with Wealthbox',
   longDescription:
     'Integrate Wealthbox functionality to manage notes, contacts, and tasks. Read content from existing notes, contacts, and tasks and write to them using OAuth authentication. Supports text content manipulation for note creation and editing.',
-  docsLink: 'https://docs.simstudio.ai/tools/wealthbox',
+  docsLink: 'https://docs.sim.ai/tools/wealthbox',
   category: 'tools',
   bgColor: '#E0E0E0',
   icon: WealthboxIcon,
@@ -28,6 +26,7 @@ export const WealthboxBlock: BlockConfig<WealthboxResponse> = {
         { label: 'Read Task', id: 'read_task' },
         { label: 'Write Task', id: 'write_task' },
       ],
+      value: () => 'read_note',
     },
     {
       id: 'credential',
@@ -38,6 +37,7 @@ export const WealthboxBlock: BlockConfig<WealthboxResponse> = {
       serviceId: 'wealthbox',
       requiredScopes: ['login', 'data'],
       placeholder: 'Select Wealthbox account',
+      required: true,
     },
     {
       id: 'noteId',
@@ -56,17 +56,34 @@ export const WealthboxBlock: BlockConfig<WealthboxResponse> = {
       requiredScopes: ['login', 'data'],
       layout: 'full',
       placeholder: 'Enter Contact ID',
+      mode: 'basic',
+      condition: { field: 'operation', value: ['read_contact', 'write_task', 'write_note'] },
+    },
+    {
+      id: 'manualContactId',
+      title: 'Contact ID',
+      type: 'short-input',
+      layout: 'full',
+      placeholder: 'Enter Contact ID',
+      mode: 'advanced',
       condition: { field: 'operation', value: ['read_contact', 'write_task', 'write_note'] },
     },
     {
       id: 'taskId',
-      title: 'Select Task',
+      title: 'Task ID',
       type: 'short-input',
-      provider: 'wealthbox',
-      serviceId: 'wealthbox',
-      requiredScopes: ['login', 'data'],
       layout: 'full',
       placeholder: 'Enter Task ID',
+      mode: 'basic',
+      condition: { field: 'operation', value: ['read_task'] },
+    },
+    {
+      id: 'manualTaskId',
+      title: 'Task ID',
+      type: 'short-input',
+      layout: 'full',
+      placeholder: 'Enter Task ID',
+      mode: 'advanced',
       condition: { field: 'operation', value: ['read_task'] },
     },
     {
@@ -76,6 +93,7 @@ export const WealthboxBlock: BlockConfig<WealthboxResponse> = {
       layout: 'full',
       placeholder: 'Enter Title',
       condition: { field: 'operation', value: ['write_task'] },
+      required: true,
     },
     {
       id: 'dueDate',
@@ -84,6 +102,7 @@ export const WealthboxBlock: BlockConfig<WealthboxResponse> = {
       layout: 'full',
       placeholder: 'Enter due date (e.g., 2015-05-24 11:00 AM -0400)',
       condition: { field: 'operation', value: ['write_task'] },
+      required: true,
     },
     {
       id: 'firstName',
@@ -92,6 +111,7 @@ export const WealthboxBlock: BlockConfig<WealthboxResponse> = {
       layout: 'full',
       placeholder: 'Enter First Name',
       condition: { field: 'operation', value: ['write_contact'] },
+      required: true,
     },
     {
       id: 'lastName',
@@ -100,6 +120,7 @@ export const WealthboxBlock: BlockConfig<WealthboxResponse> = {
       layout: 'full',
       placeholder: 'Enter Last Name',
       condition: { field: 'operation', value: ['write_contact'] },
+      required: true,
     },
     {
       id: 'emailAddress',
@@ -116,6 +137,7 @@ export const WealthboxBlock: BlockConfig<WealthboxResponse> = {
       layout: 'full',
       placeholder: 'Enter Content',
       condition: { field: 'operation', value: ['write_note', 'write_event', 'write_task'] },
+      required: true,
     },
     {
       id: 'backgroundInformation',
@@ -155,7 +177,14 @@ export const WealthboxBlock: BlockConfig<WealthboxResponse> = {
         }
       },
       params: (params) => {
-        const { credential, operation, ...rest } = params
+        const { credential, operation, contactId, manualContactId, taskId, manualTaskId, ...rest } =
+          params
+
+        // Handle contact ID input (selector or manual)
+        const effectiveContactId = (contactId || manualContactId || '').trim()
+
+        // Handle task ID input (selector or manual)
+        const effectiveTaskId = (taskId || manualTaskId || '').trim()
 
         // Build the parameters based on operation type
         const baseParams = {
@@ -168,25 +197,40 @@ export const WealthboxBlock: BlockConfig<WealthboxResponse> = {
           return {
             ...baseParams,
             noteId: params.noteId,
+            contactId: effectiveContactId,
           }
         }
 
         // For contact operations, we need contactId
         if (operation === 'read_contact') {
-          if (!params.contactId) {
+          if (!effectiveContactId) {
             throw new Error('Contact ID is required for contact operations')
           }
           return {
             ...baseParams,
-            contactId: params.contactId,
+            contactId: effectiveContactId,
           }
         }
 
         // For task operations, we need taskId
         if (operation === 'read_task') {
+          if (!effectiveTaskId) {
+            throw new Error('Task ID is required for task operations')
+          }
           return {
             ...baseParams,
-            taskId: params.taskId,
+            taskId: effectiveTaskId,
+          }
+        }
+
+        // For write_task and write_note operations, we need contactId
+        if (operation === 'write_task' || operation === 'write_note') {
+          if (!effectiveContactId) {
+            throw new Error('Contact ID is required for this operation')
+          }
+          return {
+            ...baseParams,
+            contactId: effectiveContactId,
           }
         }
 
@@ -195,27 +239,29 @@ export const WealthboxBlock: BlockConfig<WealthboxResponse> = {
     },
   },
   inputs: {
-    operation: { type: 'string', required: true },
-    credential: { type: 'string', required: true },
-    noteId: { type: 'string', required: false },
-    contactId: { type: 'string', required: false },
-    taskId: { type: 'string', required: false },
-    content: { type: 'string', required: false },
-    firstName: { type: 'string', required: false },
-    lastName: { type: 'string', required: false },
-    emailAddress: { type: 'string', required: false },
-    backgroundInformation: { type: 'string', required: false },
-    title: { type: 'string', required: false },
-    dueDate: { type: 'string', required: false },
+    operation: { type: 'string', description: 'Operation to perform' },
+    credential: { type: 'string', description: 'Wealthbox access token' },
+    noteId: { type: 'string', description: 'Note identifier' },
+    contactId: { type: 'string', description: 'Contact identifier' },
+    manualContactId: { type: 'string', description: 'Manual contact identifier' },
+    taskId: { type: 'string', description: 'Task identifier' },
+    manualTaskId: { type: 'string', description: 'Manual task identifier' },
+    content: { type: 'string', description: 'Content text' },
+    firstName: { type: 'string', description: 'First name' },
+    lastName: { type: 'string', description: 'Last name' },
+    emailAddress: { type: 'string', description: 'Email address' },
+    backgroundInformation: { type: 'string', description: 'Background information' },
+    title: { type: 'string', description: 'Task title' },
+    dueDate: { type: 'string', description: 'Due date' },
   },
   outputs: {
-    note: 'any',
-    notes: 'any',
-    contact: 'any',
-    contacts: 'any',
-    task: 'any',
-    tasks: 'any',
-    metadata: 'json',
-    success: 'any',
+    note: { type: 'any', description: 'Note data' },
+    notes: { type: 'any', description: 'Notes list' },
+    contact: { type: 'any', description: 'Contact data' },
+    contacts: { type: 'any', description: 'Contacts list' },
+    task: { type: 'any', description: 'Task data' },
+    tasks: { type: 'any', description: 'Tasks list' },
+    metadata: { type: 'json', description: 'Operation metadata' },
+    success: { type: 'any', description: 'Success status' },
   },
 }

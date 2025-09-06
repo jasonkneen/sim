@@ -1,10 +1,15 @@
 import OpenAI from 'openai'
 import { env } from '@/lib/env'
-import { createLogger } from '@/lib/logs/console-logger'
+import { createLogger } from '@/lib/logs/console/logger'
+import type { ModelsObject } from '@/providers/ollama/types'
+import type {
+  ProviderConfig,
+  ProviderRequest,
+  ProviderResponse,
+  TimeSegment,
+} from '@/providers/types'
 import { useOllamaStore } from '@/stores/ollama/store'
 import { executeTool } from '@/tools'
-import type { ProviderConfig, ProviderRequest, ProviderResponse, TimeSegment } from '../types'
-import type { ModelsObject } from './types'
 
 const logger = createLogger('OllamaProvider')
 const OLLAMA_HOST = env.OLLAMA_URL || 'http://localhost:11434'
@@ -42,7 +47,6 @@ export const ollamaProvider: ProviderConfig = {
   },
 
   executeRequest: async (request: ProviderRequest): Promise<ProviderResponse> => {
-    console.log(request)
     logger.info('Preparing Ollama request', {
       model: request.model,
       hasSystemPrompt: !!request.systemPrompt,
@@ -195,7 +199,14 @@ export const ollamaProvider: ProviderConfig = {
               // Add system parameters for execution
               const executionParams = {
                 ...toolParams,
-                ...(request.workflowId ? { _context: { workflowId: request.workflowId } } : {}),
+                ...(request.workflowId
+                  ? {
+                      _context: {
+                        workflowId: request.workflowId,
+                        ...(request.chatId ? { chatId: request.chatId } : {}),
+                      },
+                    }
+                  : {}),
                 ...(request.environmentVariables ? { envVars: request.environmentVariables } : {}),
               }
 

@@ -1,7 +1,10 @@
 import { eq } from 'drizzle-orm'
 import { type NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
-import { createLogger } from '@/lib/logs/console-logger'
+import { createLogger } from '@/lib/logs/console/logger'
+
+export const dynamic = 'force-dynamic'
+
 import { db } from '@/db'
 import { workflow, workflowSchedule } from '@/db/schema'
 

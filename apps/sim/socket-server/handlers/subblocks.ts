@@ -1,10 +1,10 @@
 import { and, eq } from 'drizzle-orm'
-import { db } from '../../db'
-import { workflow, workflowBlocks } from '../../db/schema'
-import { createLogger } from '../../lib/logs/console-logger'
-import type { AuthenticatedSocket } from '../middleware/auth'
-import type { RoomManager } from '../rooms/manager'
-import type { HandlerDependencies } from './workflow'
+import { createLogger } from '@/lib/logs/console/logger'
+import { db } from '@/db'
+import { workflow, workflowBlocks } from '@/db/schema'
+import type { HandlerDependencies } from '@/socket-server/handlers/workflow'
+import type { AuthenticatedSocket } from '@/socket-server/middleware/auth'
+import type { RoomManager } from '@/socket-server/rooms/manager'
 
 const logger = createLogger('SubblocksHandlers')
 
@@ -125,9 +125,16 @@ export function setupSubblocksHandlers(
             serverTimestamp: Date.now(),
           })
         }
-      }
 
-      logger.debug(`Subblock update in workflow ${workflowId}: ${blockId}.${subblockId}`)
+        logger.debug(`Subblock update in workflow ${workflowId}: ${blockId}.${subblockId}`)
+      } else if (operationId) {
+        // Block was deleted - notify client that operation completed (but didn't update anything)
+        socket.emit('operation-failed', {
+          operationId,
+          error: 'Block no longer exists',
+          retryable: false, // No point retrying for deleted blocks
+        })
+      }
     } catch (error) {
       logger.error('Error handling subblock update:', error)
 

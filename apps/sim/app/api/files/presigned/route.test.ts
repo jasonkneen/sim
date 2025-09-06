@@ -25,7 +25,7 @@ describe('/api/files/presigned', () => {
         storageProvider: 's3',
       })
 
-      const { POST } = await import('./route')
+      const { POST } = await import('@/app/api/files/presigned/route')
 
       const request = new NextRequest('http://localhost:3000/api/files/presigned', {
         method: 'POST',
@@ -51,7 +51,7 @@ describe('/api/files/presigned', () => {
         storageProvider: 's3',
       })
 
-      const { POST } = await import('./route')
+      const { POST } = await import('@/app/api/files/presigned/route')
 
       const request = new NextRequest('http://localhost:3000/api/files/presigned', {
         method: 'POST',
@@ -75,7 +75,7 @@ describe('/api/files/presigned', () => {
         storageProvider: 's3',
       })
 
-      const { POST } = await import('./route')
+      const { POST } = await import('@/app/api/files/presigned/route')
 
       const request = new NextRequest('http://localhost:3000/api/files/presigned', {
         method: 'POST',
@@ -99,7 +99,7 @@ describe('/api/files/presigned', () => {
         storageProvider: 's3',
       })
 
-      const { POST } = await import('./route')
+      const { POST } = await import('@/app/api/files/presigned/route')
 
       const request = new NextRequest('http://localhost:3000/api/files/presigned', {
         method: 'POST',
@@ -124,7 +124,7 @@ describe('/api/files/presigned', () => {
         storageProvider: 's3',
       })
 
-      const { POST } = await import('./route')
+      const { POST } = await import('@/app/api/files/presigned/route')
 
       const largeFileSize = 150 * 1024 * 1024 // 150MB (exceeds 100MB limit)
       const request = new NextRequest('http://localhost:3000/api/files/presigned', {
@@ -150,7 +150,7 @@ describe('/api/files/presigned', () => {
         storageProvider: 's3',
       })
 
-      const { POST } = await import('./route')
+      const { POST } = await import('@/app/api/files/presigned/route')
 
       const request = new NextRequest('http://localhost:3000/api/files/presigned', {
         method: 'POST',
@@ -182,7 +182,7 @@ describe('/api/files/presigned', () => {
         storageProvider: 's3',
       })
 
-      const { POST } = await import('./route')
+      const { POST } = await import('@/app/api/files/presigned/route')
 
       const request = new NextRequest(
         'http://localhost:3000/api/files/presigned?type=knowledge-base',
@@ -204,13 +204,39 @@ describe('/api/files/presigned', () => {
       expect(data.directUploadSupported).toBe(true)
     })
 
+    it('should generate chat S3 presigned URL with chat prefix and direct path', async () => {
+      setupFileApiMocks({
+        cloudEnabled: true,
+        storageProvider: 's3',
+      })
+
+      const { POST } = await import('@/app/api/files/presigned/route')
+
+      const request = new NextRequest('http://localhost:3000/api/files/presigned?type=chat', {
+        method: 'POST',
+        body: JSON.stringify({
+          fileName: 'chat-logo.png',
+          contentType: 'image/png',
+          fileSize: 4096,
+        }),
+      })
+
+      const response = await POST(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(200)
+      expect(data.fileInfo.key).toMatch(/^chat\/.*chat-logo\.png$/)
+      expect(data.fileInfo.path).toMatch(/^https:\/\/.*\.s3\..*\.amazonaws\.com\/chat\//)
+      expect(data.directUploadSupported).toBe(true)
+    })
+
     it('should generate Azure Blob presigned URL successfully', async () => {
       setupFileApiMocks({
         cloudEnabled: true,
         storageProvider: 'blob',
       })
 
-      const { POST } = await import('./route')
+      const { POST } = await import('@/app/api/files/presigned/route')
 
       const request = new NextRequest('http://localhost:3000/api/files/presigned', {
         method: 'POST',
@@ -225,7 +251,9 @@ describe('/api/files/presigned', () => {
       const data = await response.json()
 
       expect(response.status).toBe(200)
-      expect(data.presignedUrl).toContain('https://example.com/presigned-url')
+      expect(data.presignedUrl).toContain(
+        'https://testaccount.blob.core.windows.net/test-container'
+      )
       expect(data.presignedUrl).toContain('sas-token-string')
       expect(data.fileInfo).toMatchObject({
         path: expect.stringContaining('/api/files/serve/blob/'),
@@ -243,6 +271,41 @@ describe('/api/files/presigned', () => {
       })
     })
 
+    it('should generate chat Azure Blob presigned URL with chat prefix and direct path', async () => {
+      setupFileApiMocks({
+        cloudEnabled: true,
+        storageProvider: 'blob',
+      })
+
+      const { POST } = await import('@/app/api/files/presigned/route')
+
+      const request = new NextRequest('http://localhost:3000/api/files/presigned?type=chat', {
+        method: 'POST',
+        body: JSON.stringify({
+          fileName: 'chat-logo.png',
+          contentType: 'image/png',
+          fileSize: 4096,
+        }),
+      })
+
+      const response = await POST(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(200)
+      expect(data.fileInfo.key).toMatch(/^chat\/.*chat-logo\.png$/)
+      expect(data.fileInfo.path).toContain(
+        'https://testaccount.blob.core.windows.net/test-container'
+      )
+      expect(data.directUploadSupported).toBe(true)
+      expect(data.uploadHeaders).toMatchObject({
+        'x-ms-blob-type': 'BlockBlob',
+        'x-ms-blob-content-type': 'image/png',
+        'x-ms-meta-originalname': expect.any(String),
+        'x-ms-meta-uploadedat': '2024-01-01T00:00:00.000Z',
+        'x-ms-meta-purpose': 'chat',
+      })
+    })
+
     it('should return error for unknown storage provider', async () => {
       // For unknown provider, we'll need to mock manually since our helper doesn't support it
       vi.doMock('@/lib/uploads', () => ({
@@ -250,7 +313,7 @@ describe('/api/files/presigned', () => {
         isUsingCloudStorage: vi.fn().mockReturnValue(true),
       }))
 
-      const { POST } = await import('./route')
+      const { POST } = await import('@/app/api/files/presigned/route')
 
       const request = new NextRequest('http://localhost:3000/api/files/presigned', {
         method: 'POST',
@@ -293,7 +356,7 @@ describe('/api/files/presigned', () => {
         getSignedUrl: vi.fn().mockRejectedValue(new Error('S3 service unavailable')),
       }))
 
-      const { POST } = await import('./route')
+      const { POST } = await import('@/app/api/files/presigned/route')
 
       const request = new NextRequest('http://localhost:3000/api/files/presigned', {
         method: 'POST',
@@ -339,7 +402,7 @@ describe('/api/files/presigned', () => {
         sanitizeFilenameForMetadata: vi.fn((filename) => filename),
       }))
 
-      const { POST } = await import('./route')
+      const { POST } = await import('@/app/api/files/presigned/route')
 
       const request = new NextRequest('http://localhost:3000/api/files/presigned', {
         method: 'POST',
@@ -364,7 +427,7 @@ describe('/api/files/presigned', () => {
         storageProvider: 's3',
       })
 
-      const { POST } = await import('./route')
+      const { POST } = await import('@/app/api/files/presigned/route')
 
       const request = new NextRequest('http://localhost:3000/api/files/presigned', {
         method: 'POST',
@@ -382,7 +445,7 @@ describe('/api/files/presigned', () => {
 
   describe('OPTIONS', () => {
     it('should handle CORS preflight requests', async () => {
-      const { OPTIONS } = await import('./route')
+      const { OPTIONS } = await import('@/app/api/files/presigned/route')
 
       const response = await OPTIONS()
 

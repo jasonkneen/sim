@@ -1,24 +1,6 @@
 import { GoogleIcon } from '@/components/icons'
-import type { ToolResponse } from '@/tools/types'
-import type { BlockConfig } from '../types'
-
-interface GoogleSearchResponse extends ToolResponse {
-  output: {
-    items: Array<{
-      title: string
-      link: string
-      snippet: string
-      displayLink?: string
-      pagemap?: Record<string, any>
-    }>
-    searchInformation: {
-      totalResults: string
-      searchTime: number
-      formattedSearchTime: string
-      formattedTotalResults: string
-    }
-  }
-}
+import type { BlockConfig } from '@/blocks/types'
+import type { GoogleSearchResponse } from '@/tools/google/types'
 
 export const GoogleSearchBlock: BlockConfig<GoogleSearchResponse> = {
   type: 'google_search',
@@ -26,7 +8,7 @@ export const GoogleSearchBlock: BlockConfig<GoogleSearchResponse> = {
   description: 'Search the web',
   longDescription:
     'Searches the web using the Google Custom Search API, which provides high-quality search results from the entire internet or a specific site defined by a custom search engine ID.',
-  docsLink: 'https://docs.simstudio.ai/tools/google_search',
+  docsLink: 'https://docs.sim.ai/tools/google_search',
   category: 'tools',
   bgColor: '#E0E0E0',
   icon: GoogleIcon,
@@ -38,6 +20,7 @@ export const GoogleSearchBlock: BlockConfig<GoogleSearchResponse> = {
       type: 'long-input',
       layout: 'full',
       placeholder: 'Enter your search query',
+      required: true,
     },
     {
       id: 'searchEngineId',
@@ -45,7 +28,7 @@ export const GoogleSearchBlock: BlockConfig<GoogleSearchResponse> = {
       type: 'short-input',
       layout: 'full',
       placeholder: 'Enter your Custom Search Engine ID',
-      description: 'Required Custom Search Engine ID',
+      required: true,
     },
     {
       id: 'apiKey',
@@ -53,8 +36,8 @@ export const GoogleSearchBlock: BlockConfig<GoogleSearchResponse> = {
       type: 'short-input',
       layout: 'full',
       placeholder: 'Enter your Google API key',
-      description: 'Required API Key for Google Search',
       password: true,
+      required: true,
     },
     {
       id: 'num',
@@ -62,7 +45,7 @@ export const GoogleSearchBlock: BlockConfig<GoogleSearchResponse> = {
       type: 'short-input',
       layout: 'half',
       placeholder: '10',
-      description: 'Number of search results to return (max: 10)',
+      required: true,
     },
   ],
 
@@ -80,14 +63,14 @@ export const GoogleSearchBlock: BlockConfig<GoogleSearchResponse> = {
   },
 
   inputs: {
-    query: { type: 'string', required: true },
-    apiKey: { type: 'string', required: true },
-    searchEngineId: { type: 'string', required: true },
-    num: { type: 'string', required: false },
+    query: { type: 'string', description: 'Search query terms' },
+    apiKey: { type: 'string', description: 'Google API key' },
+    searchEngineId: { type: 'string', description: 'Custom search engine ID' },
+    num: { type: 'string', description: 'Number of results' },
   },
 
   outputs: {
-    items: 'json',
-    searchInformation: 'json',
+    items: { type: 'json', description: 'Search result items' },
+    searchInformation: { type: 'json', description: 'Search metadata' },
   },
 }

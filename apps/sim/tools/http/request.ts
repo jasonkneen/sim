@@ -1,9 +1,9 @@
-import { env } from '@/lib/env'
+import { getEnv } from '@/lib/env'
 import { isTest } from '@/lib/environment'
-import { createLogger } from '@/lib/logs/console-logger'
+import { createLogger } from '@/lib/logs/console/logger'
 import { getBaseUrl } from '@/lib/urls/utils'
-import type { HttpMethod, TableRow, ToolConfig } from '../types'
-import type { RequestParams, RequestResponse } from './types'
+import type { RequestParams, RequestResponse } from '@/tools/http/types'
+import type { HttpMethod, TableRow, ToolConfig } from '@/tools/types'
 
 const logger = createLogger('HTTPRequestTool')
 
@@ -15,7 +15,7 @@ const getReferer = (): string => {
   try {
     return getBaseUrl()
   } catch (_error) {
-    return env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    return getEnv('NEXT_PUBLIC_APP_URL') || 'http://localhost:3000'
   }
 }
 

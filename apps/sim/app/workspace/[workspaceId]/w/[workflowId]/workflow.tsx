@@ -11,23 +11,17 @@ import ReactFlow, {
   useReactFlow,
 } from 'reactflow'
 import 'reactflow/dist/style.css'
-import { createLogger } from '@/lib/logs/console-logger'
-import { ControlBar } from '@/app/workspace/[workspaceId]/w/[workflowId]/components/control-bar/control-bar'
-import { ErrorBoundary } from '@/app/workspace/[workspaceId]/w/[workflowId]/components/error/index'
-import { LoopNodeComponent } from '@/app/workspace/[workspaceId]/w/[workflowId]/components/loop-node/loop-node'
-import { Panel } from '@/app/workspace/[workspaceId]/w/[workflowId]/components/panel/panel'
-import { ParallelNodeComponent } from '@/app/workspace/[workspaceId]/w/[workflowId]/components/parallel-node/parallel-node'
-import { useUserPermissionsContext } from '@/app/workspace/[workspaceId]/w/components/providers/workspace-permissions-provider'
-import { getBlock } from '@/blocks'
-import { useCollaborativeWorkflow } from '@/hooks/use-collaborative-workflow'
-import { useWorkspacePermissions } from '@/hooks/use-workspace-permissions'
-import { useExecutionStore } from '@/stores/execution/store'
-import { useVariablesStore } from '@/stores/panel/variables/store'
-import { useGeneralStore } from '@/stores/settings/general/store'
-import { useWorkflowRegistry } from '@/stores/workflows/registry/store'
-import { useWorkflowStore } from '@/stores/workflows/workflow/store'
-import { WorkflowBlock } from './components/workflow-block/workflow-block'
-import { WorkflowEdge } from './components/workflow-edge/workflow-edge'
+import { createLogger } from '@/lib/logs/console/logger'
+import { useUserPermissionsContext } from '@/app/workspace/[workspaceId]/components/providers/workspace-permissions-provider'
+import {
+  ControlBar,
+  ErrorBoundary,
+  LoopNodeComponent,
+  Panel,
+  ParallelNodeComponent,
+  WorkflowBlock,
+  WorkflowEdge,
+} from '@/app/workspace/[workspaceId]/w/[workflowId]/components'
 import {
   applyAutoLayoutSmooth,
   detectHandleOrientation,
@@ -37,7 +31,15 @@ import {
   isPointInLoopNode,
   resizeLoopNodes,
   updateNodeParent as updateNodeParentUtil,
-} from './utils'
+} from '@/app/workspace/[workspaceId]/w/[workflowId]/utils'
+import { getBlock } from '@/blocks'
+import { useCollaborativeWorkflow } from '@/hooks/use-collaborative-workflow'
+import { useWorkspacePermissions } from '@/hooks/use-workspace-permissions'
+import { useExecutionStore } from '@/stores/execution/store'
+import { useVariablesStore } from '@/stores/panel/variables/store'
+import { useGeneralStore } from '@/stores/settings/general/store'
+import { useWorkflowRegistry } from '@/stores/workflows/registry/store'
+import { useWorkflowStore } from '@/stores/workflows/workflow/store'
 
 const logger = createLogger('Workflow')
 
@@ -327,6 +329,10 @@ const WorkflowContent = React.memo(() => {
     const handleAutoLayoutEvent = () => {
       if (cleanup) cleanup()
 
+      // Call auto layout directly without debounce for copilot events
+      handleAutoLayout()
+
+      // Also set up debounced version as backup
       cleanup = debouncedAutoLayout()
     }
 
@@ -402,7 +408,6 @@ const WorkflowContent = React.memo(() => {
       }
 
       const { type } = event.detail
-      console.log('🛠️ Adding block from toolbar:', type)
 
       if (!type) return
       if (type === 'connectionBlock') return
@@ -1079,6 +1084,16 @@ const WorkflowContent = React.memo(() => {
         const targetNode = getNodes().find((n) => n.id === connection.target)
 
         if (!sourceNode || !targetNode) return
+
+        // Prevent incoming connections to trigger blocks (webhook, schedule, etc.)
+        if (targetNode.data?.config?.category === 'triggers') {
+          return
+        }
+
+        // Prevent incoming connections to starter blocks (still keep separate for backward compatibility)
+        if (targetNode.data?.type === 'starter') {
+          return
+        }
 
         // Get parent information (handle container start node case)
         const sourceParentId =

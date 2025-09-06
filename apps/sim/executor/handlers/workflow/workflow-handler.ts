@@ -1,12 +1,13 @@
 import { generateInternalToken } from '@/lib/auth/internal'
-import { createLogger } from '@/lib/logs/console-logger'
+import { createLogger } from '@/lib/logs/console/logger'
 import { getBaseUrl } from '@/lib/urls/utils'
 import type { BlockOutput } from '@/blocks/types'
+import { Executor } from '@/executor'
+import { BlockType } from '@/executor/consts'
+import type { BlockHandler, ExecutionContext, StreamingExecution } from '@/executor/types'
 import { Serializer } from '@/serializer'
 import type { SerializedBlock } from '@/serializer/types'
 import { useWorkflowRegistry } from '@/stores/workflows/registry/store'
-import { Executor } from '../../index'
-import type { BlockHandler, ExecutionContext, StreamingExecution } from '../../types'
 
 const logger = createLogger('WorkflowBlockHandler')
 
@@ -22,7 +23,7 @@ export class WorkflowBlockHandler implements BlockHandler {
   private static executionStack = new Set<string>()
 
   canHandle(block: SerializedBlock): boolean {
-    return block.metadata?.id === 'workflow'
+    return block.metadata?.id === BlockType.WORKFLOW
   }
 
   async execute(
@@ -88,10 +89,13 @@ export class WorkflowBlockHandler implements BlockHandler {
         workflow: childWorkflow.serializedState,
         workflowInput: childWorkflowInput,
         envVarValues: context.environmentVariables,
+        workflowVariables: childWorkflow.variables || {},
       })
 
       const startTime = performance.now()
-      const result = await subExecutor.execute(executionId)
+      // Use the actual child workflow ID for authentication, not the execution ID
+      // This ensures knowledge base and other API calls can properly authenticate
+      const result = await subExecutor.execute(workflowId)
       const duration = performance.now() - startTime
 
       // Remove current execution from stack after completion
@@ -172,12 +176,24 @@ export class WorkflowBlockHandler implements BlockHandler {
         workflowState.blocks,
         workflowState.edges || [],
         workflowState.loops || {},
-        workflowState.parallels || {}
+        workflowState.parallels || {},
+        true // Enable validation during execution
       )
+
+      const workflowVariables = (workflowData.variables as Record<string, any>) || {}
+
+      if (Object.keys(workflowVariables).length > 0) {
+        logger.info(
+          `Loaded ${Object.keys(workflowVariables).length} variables for child workflow: ${workflowId}`
+        )
+      } else {
+        logger.debug(`No workflow variables found for child workflow: ${workflowId}`)
+      }
 
       return {
         name: workflowData.name,
         serializedState: serializedWorkflow,
+        variables: workflowVariables,
       }
     } catch (error) {
       logger.error(`Error loading child workflow ${workflowId}:`, error)

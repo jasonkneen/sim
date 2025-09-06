@@ -1,8 +1,6 @@
 import { xIcon } from '@/components/icons'
-import type { XReadResponse, XSearchResponse, XUserResponse, XWriteResponse } from '@/tools/x/types'
-import type { BlockConfig } from '../types'
-
-type XResponse = XWriteResponse | XReadResponse | XSearchResponse | XUserResponse
+import type { BlockConfig } from '@/blocks/types'
+import type { XResponse } from '@/tools/x/types'
 
 export const XBlock: BlockConfig<XResponse> = {
   type: 'x',
@@ -10,12 +8,11 @@ export const XBlock: BlockConfig<XResponse> = {
   description: 'Interact with X',
   longDescription:
     'Connect with X to post tweets, read content, search for information, and access user profiles. Integrate social media capabilities into your workflow with comprehensive X platform access.',
-  docsLink: 'https://docs.simstudio.ai/tools/x',
+  docsLink: 'https://docs.sim.ai/tools/x',
   category: 'tools',
   bgColor: '#000000', // X's black color
   icon: xIcon,
   subBlocks: [
-    // Operation selector
     {
       id: 'operation',
       title: 'Operation',
@@ -29,7 +26,6 @@ export const XBlock: BlockConfig<XResponse> = {
       ],
       value: () => 'x_write',
     },
-    // X OAuth Authentication
     {
       id: 'credential',
       title: 'X Account',
@@ -40,7 +36,6 @@ export const XBlock: BlockConfig<XResponse> = {
       requiredScopes: ['tweet.read', 'tweet.write', 'users.read'],
       placeholder: 'Select X account',
     },
-    // Write operation inputs
     {
       id: 'text',
       title: 'Tweet Text',
@@ -48,6 +43,7 @@ export const XBlock: BlockConfig<XResponse> = {
       layout: 'full',
       placeholder: "What's happening?",
       condition: { field: 'operation', value: 'x_write' },
+      required: true,
     },
     {
       id: 'replyTo',
@@ -65,7 +61,6 @@ export const XBlock: BlockConfig<XResponse> = {
       placeholder: 'Enter comma-separated media IDs',
       condition: { field: 'operation', value: 'x_write' },
     },
-    // Read operation inputs
     {
       id: 'tweetId',
       title: 'Tweet ID',
@@ -73,6 +68,7 @@ export const XBlock: BlockConfig<XResponse> = {
       layout: 'full',
       placeholder: 'Enter tweet ID to read',
       condition: { field: 'operation', value: 'x_read' },
+      required: true,
     },
     {
       id: 'includeReplies',
@@ -86,7 +82,6 @@ export const XBlock: BlockConfig<XResponse> = {
       value: () => 'false',
       condition: { field: 'operation', value: 'x_read' },
     },
-    // Search operation inputs
     {
       id: 'query',
       title: 'Search Query',
@@ -94,6 +89,7 @@ export const XBlock: BlockConfig<XResponse> = {
       layout: 'full',
       placeholder: 'Enter search terms (supports X search operators)',
       condition: { field: 'operation', value: 'x_search' },
+      required: true,
     },
     {
       id: 'maxResults',
@@ -131,7 +127,6 @@ export const XBlock: BlockConfig<XResponse> = {
       placeholder: 'YYYY-MM-DDTHH:mm:ssZ',
       condition: { field: 'operation', value: 'x_search' },
     },
-    // User operation inputs
     {
       id: 'username',
       title: 'Username',
@@ -139,6 +134,7 @@ export const XBlock: BlockConfig<XResponse> = {
       layout: 'full',
       placeholder: 'Enter username (without @)',
       condition: { field: 'operation', value: 'x_user' },
+      required: true,
     },
   ],
   tools: {
@@ -196,34 +192,30 @@ export const XBlock: BlockConfig<XResponse> = {
     },
   },
   inputs: {
-    operation: { type: 'string', required: true },
-    credential: { type: 'string', required: true },
-    // Write operation
-    text: { type: 'string', required: false },
-    replyTo: { type: 'string', required: false },
-    mediaIds: { type: 'string', required: false },
-    poll: { type: 'json', required: false },
-    // Read operation
-    tweetId: { type: 'string', required: false },
-    includeReplies: { type: 'boolean', required: false },
-    // Search operation
-    query: { type: 'string', required: false },
-    maxResults: { type: 'number', required: false },
-    startTime: { type: 'string', required: false },
-    endTime: { type: 'string', required: false },
-    sortOrder: { type: 'string', required: false },
-    // User operation
-    username: { type: 'string', required: false },
-    includeRecentTweets: { type: 'boolean', required: false },
+    operation: { type: 'string', description: 'Operation to perform' },
+    credential: { type: 'string', description: 'X account credential' },
+    text: { type: 'string', description: 'Tweet text content' },
+    replyTo: { type: 'string', description: 'Reply to tweet ID' },
+    mediaIds: { type: 'string', description: 'Media identifiers' },
+    poll: { type: 'json', description: 'Poll configuration' },
+    tweetId: { type: 'string', description: 'Tweet identifier' },
+    includeReplies: { type: 'boolean', description: 'Include replies' },
+    query: { type: 'string', description: 'Search query terms' },
+    maxResults: { type: 'number', description: 'Maximum search results' },
+    startTime: { type: 'string', description: 'Search start time' },
+    endTime: { type: 'string', description: 'Search end time' },
+    sortOrder: { type: 'string', description: 'Result sort order' },
+    username: { type: 'string', description: 'User profile name' },
+    includeRecentTweets: { type: 'boolean', description: 'Include recent tweets' },
   },
   outputs: {
-    tweet: 'json',
-    replies: 'any',
-    context: 'any',
-    tweets: 'json',
-    includes: 'any',
-    meta: 'json',
-    user: 'json',
-    recentTweets: 'any',
+    tweet: { type: 'json', description: 'Tweet data' },
+    replies: { type: 'any', description: 'Tweet replies' },
+    context: { type: 'any', description: 'Tweet context' },
+    tweets: { type: 'json', description: 'Tweets data' },
+    includes: { type: 'any', description: 'Additional data' },
+    meta: { type: 'json', description: 'Response metadata' },
+    user: { type: 'json', description: 'User profile data' },
+    recentTweets: { type: 'any', description: 'Recent tweets data' },
   },
 }

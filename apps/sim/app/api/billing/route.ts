@@ -3,11 +3,13 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { getSimplifiedBillingSummary } from '@/lib/billing/core/billing'
 import { getOrganizationBillingData } from '@/lib/billing/core/organization-billing'
-import { createLogger } from '@/lib/logs/console-logger'
+import { createLogger } from '@/lib/logs/console/logger'
 import { db } from '@/db'
 import { member } from '@/db/schema'
 
 const logger = createLogger('UnifiedBillingAPI')
+
+export const dynamic = 'force-dynamic'
 
 /**
  * Unified Billing Endpoint

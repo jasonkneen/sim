@@ -3,15 +3,15 @@ import { and, eq, inArray, lt, sql } from 'drizzle-orm'
 import { type NextRequest, NextResponse } from 'next/server'
 import { verifyCronAuth } from '@/lib/auth/internal'
 import { env } from '@/lib/env'
-import { createLogger } from '@/lib/logs/console-logger'
-import { snapshotService } from '@/lib/logs/snapshot-service'
+import { createLogger } from '@/lib/logs/console/logger'
+import { snapshotService } from '@/lib/logs/execution/snapshot/service'
 import { getS3Client } from '@/lib/uploads/s3/s3-client'
 import { db } from '@/db'
 import { subscription, user, workflow, workflowExecutionLogs } from '@/db/schema'
 
 export const dynamic = 'force-dynamic'
 
-const logger = createLogger('LogsCleanup')
+const logger = createLogger('LogsCleanupAPI')
 
 const BATCH_SIZE = 2000
 const S3_CONFIG = {
@@ -151,7 +151,7 @@ export async function GET(request: NextRequest) {
           results.enhancedLogs.archived++
 
           try {
-            // Delete enhanced log (will cascade to workflowExecutionBlocks due to foreign key)
+            // Delete enhanced log
             const deleteResult = await db
               .delete(workflowExecutionLogs)
               .where(eq(workflowExecutionLogs.id, log.id))

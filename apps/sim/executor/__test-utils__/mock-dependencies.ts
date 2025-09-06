@@ -3,7 +3,7 @@ import { vi } from 'vitest'
 // Mock common dependencies used across executor handler tests
 
 // Logger
-vi.mock('@/lib/logs/console-logger', () => ({
+vi.mock('@/lib/logs/console/logger', () => ({
   createLogger: vi.fn(() => ({
     info: vi.fn(),
     error: vi.fn(),
@@ -12,16 +12,22 @@ vi.mock('@/lib/logs/console-logger', () => ({
   })),
 }))
 
+// Blocks
+vi.mock('@/blocks/index', () => ({
+  getBlock: vi.fn(),
+}))
+
 // Tools
 vi.mock('@/tools/utils', () => ({
   getTool: vi.fn(),
   getToolAsync: vi.fn(),
-  validateToolRequest: vi.fn(),
+  validateToolRequest: vi.fn(), // Keep for backward compatibility
   formatRequestParams: vi.fn(),
   transformTable: vi.fn(),
   createParamSchema: vi.fn(),
   getClientEnvVars: vi.fn(),
   createCustomToolRequestBody: vi.fn(),
+  validateRequiredParametersAfterMerge: vi.fn(),
 }))
 
 // Utils
@@ -50,8 +56,8 @@ vi.mock('@/providers/utils', async (importOriginal) => {
 })
 
 // Executor utilities
-vi.mock('../../path')
-vi.mock('../../resolver', () => ({
+vi.mock('@/executor/path')
+vi.mock('@/executor/resolver', () => ({
   InputResolver: vi.fn(),
 }))
 

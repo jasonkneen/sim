@@ -2,9 +2,13 @@
 
 import { useEffect, useState } from 'react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import {
+  type SlackChannelInfo,
+  SlackChannelSelector,
+} from '@/app/workspace/[workspaceId]/w/[workflowId]/components/workflow-block/components/sub-block/components/channel-selector/components/slack-channel-selector'
+import { useSubBlockValue } from '@/app/workspace/[workspaceId]/w/[workflowId]/components/workflow-block/components/sub-block/hooks/use-sub-block-value'
 import type { SubBlockConfig } from '@/blocks/types'
 import { useSubBlockStore } from '@/stores/workflows/subblock/store'
-import { type SlackChannelInfo, SlackChannelSelector } from './components/slack-channel-selector'
 
 interface ChannelSelectorInputProps {
   blockId: string
@@ -25,7 +29,10 @@ export function ChannelSelectorInput({
   isPreview = false,
   previewValue,
 }: ChannelSelectorInputProps) {
-  const { getValue, setValue } = useSubBlockStore()
+  const { getValue } = useSubBlockStore()
+
+  // Use the proper hook to get the current value and setter (same as file-selector)
+  const [storeValue, setStoreValue] = useSubBlockValue(blockId, subBlock.id)
   const [selectedChannelId, setSelectedChannelId] = useState<string>('')
   const [_channelInfo, setChannelInfo] = useState<SlackChannelInfo | null>(null)
 
@@ -47,9 +54,9 @@ export function ChannelSelectorInput({
   }
 
   // Use preview value when in preview mode, otherwise use store value
-  const value = isPreview ? previewValue : getValue(blockId, subBlock.id)
+  const value = isPreview ? previewValue : storeValue
 
-  // Get the current value from the store or prop value if in preview mode
+  // Get the current value from the store or prop value if in preview mode (same pattern as file-selector)
   useEffect(() => {
     if (isPreview && previewValue !== undefined) {
       const value = previewValue
@@ -64,12 +71,12 @@ export function ChannelSelectorInput({
     }
   }, [blockId, subBlock.id, getValue, isPreview, previewValue])
 
-  // Handle channel selection
+  // Handle channel selection (same pattern as file-selector)
   const handleChannelChange = (channelId: string, info?: SlackChannelInfo) => {
     setSelectedChannelId(channelId)
     setChannelInfo(info || null)
     if (!isPreview) {
-      setValue(blockId, subBlock.id, channelId)
+      setStoreValue(channelId)
     }
     onChannelSelect?.(channelId)
   }

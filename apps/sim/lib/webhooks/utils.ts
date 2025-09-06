@@ -1,18 +1,9 @@
-import { and, eq, sql } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { type NextRequest, NextResponse } from 'next/server'
-import { v4 as uuidv4 } from 'uuid'
-import { createLogger } from '@/lib/logs/console-logger'
-import { EnhancedLoggingSession } from '@/lib/logs/enhanced-logging-session'
-import { hasProcessedMessage, markMessageAsProcessed } from '@/lib/redis'
-import { decryptSecret } from '@/lib/utils'
-import { loadWorkflowFromNormalizedTables } from '@/lib/workflows/db-helpers'
-import { updateWorkflowRunCounts } from '@/lib/workflows/utils'
+import { createLogger } from '@/lib/logs/console/logger'
 import { getOAuthToken } from '@/app/api/auth/oauth/utils'
 import { db } from '@/db'
-import { environment as environmentTable, userStats, webhook } from '@/db/schema'
-import { Executor } from '@/executor'
-import { Serializer } from '@/serializer'
-import { mergeSubblockStateAsync } from '@/stores/workflows/server-utils'
+import { webhook } from '@/db/schema'
 
 const logger = createLogger('WebhookUtils')
 
@@ -146,67 +137,6 @@ export async function validateSlackSignature(
     console.error('Error validating Slack signature:', error)
     return false
   }
-}
-
-/**
- * Process WhatsApp message deduplication
- */
-export async function processWhatsAppDeduplication(
-  requestId: string,
-  messages: any[]
-): Promise<NextResponse | null> {
-  if (messages.length > 0) {
-    const message = messages[0]
-    const messageId = message.id
-
-    if (messageId) {
-      const whatsappMsgKey = `whatsapp:msg:${messageId}`
-
-      try {
-        const isDuplicate = await hasProcessedMessage(whatsappMsgKey)
-        if (isDuplicate) {
-          logger.info(`[${requestId}] Duplicate WhatsApp message detected: ${messageId}`)
-          return new NextResponse('Duplicate message', { status: 200 })
-        }
-
-        // Mark as processed BEFORE processing
-        await markMessageAsProcessed(whatsappMsgKey, 60 * 60 * 24)
-      } catch (error) {
-        logger.error(`[${requestId}] Error in WhatsApp deduplication`, error)
-        // Continue processing
-      }
-    }
-  }
-
-  return null
-}
-
-/**
- * Process generic deduplication using request hash
- */
-export async function processGenericDeduplication(
-  requestId: string,
-  path: string,
-  body: any
-): Promise<NextResponse | null> {
-  try {
-    const requestHash = await generateRequestHash(path, body)
-    const genericMsgKey = `generic:${requestHash}`
-
-    const isDuplicate = await hasProcessedMessage(genericMsgKey)
-    if (isDuplicate) {
-      logger.info(`[${requestId}] Duplicate request detected with hash: ${requestHash}`)
-      return new NextResponse('Duplicate request', { status: 200 })
-    }
-
-    // Mark as processed
-    await markMessageAsProcessed(genericMsgKey, 60 * 60 * 24)
-  } catch (error) {
-    logger.error(`[${requestId}] Error in generic deduplication`, error)
-    // Continue processing
-  }
-
-  return null
 }
 
 /**
@@ -400,6 +330,61 @@ export function formatWebhookInput(
     }
     return body
   }
+
+  if (foundWebhook.provider === 'microsoftteams') {
+    // Microsoft Teams outgoing webhook - Teams sending data to us
+    const messageText = body?.text || ''
+    const messageId = body?.id || ''
+    const timestamp = body?.timestamp || body?.localTimestamp || ''
+    const from = body?.from || {}
+    const conversation = body?.conversation || {}
+
+    return {
+      input: messageText, // Primary workflow input - the message text
+      microsoftteams: {
+        message: {
+          id: messageId,
+          text: messageText,
+          timestamp,
+          type: body?.type || 'message',
+          serviceUrl: body?.serviceUrl,
+          channelId: body?.channelId,
+          raw: body,
+        },
+        from: {
+          id: from.id,
+          name: from.name,
+          aadObjectId: from.aadObjectId,
+        },
+        conversation: {
+          id: conversation.id,
+          name: conversation.name,
+          conversationType: conversation.conversationType,
+          tenantId: conversation.tenantId,
+        },
+        activity: {
+          type: body?.type,
+          id: body?.id,
+          timestamp: body?.timestamp,
+          localTimestamp: body?.localTimestamp,
+          serviceUrl: body?.serviceUrl,
+          channelId: body?.channelId,
+        },
+      },
+      webhook: {
+        data: {
+          provider: 'microsoftteams',
+          path: foundWebhook.path,
+          providerConfig: foundWebhook.providerConfig,
+          payload: body,
+          headers: Object.fromEntries(request.headers.entries()),
+          method: request.method,
+        },
+      },
+      workflowId: foundWorkflow.id,
+    }
+  }
+
   // Generic format for Slack and other providers
   return {
     webhook: {
@@ -417,375 +402,50 @@ export function formatWebhookInput(
 }
 
 /**
- * Execute workflow with the provided input
+ * Validates a Microsoft Teams outgoing webhook request signature using HMAC SHA-256
+ * @param hmacSecret - Microsoft Teams HMAC secret (base64 encoded)
+ * @param signature - Authorization header value (should start with 'HMAC ')
+ * @param body - Raw request body string
+ * @returns Whether the signature is valid
  */
-export async function executeWorkflowFromPayload(
-  foundWorkflow: any,
-  input: any,
-  executionId: string,
-  requestId: string
-): Promise<void> {
-  // Add log at the beginning of this function for clarity
-  logger.info(`[${requestId}] Preparing to execute workflow`, {
-    workflowId: foundWorkflow.id,
-    executionId,
-    triggerSource: 'webhook-payload',
-  })
-
-  const loggingSession = new EnhancedLoggingSession(
-    foundWorkflow.id,
-    executionId,
-    'webhook',
-    requestId
-  )
-
+export function validateMicrosoftTeamsSignature(
+  hmacSecret: string,
+  signature: string,
+  body: string
+): boolean {
   try {
-    // Load workflow data from normalized tables
-    logger.debug(`[${requestId}] Loading workflow ${foundWorkflow.id} from normalized tables`)
-    const normalizedData = await loadWorkflowFromNormalizedTables(foundWorkflow.id)
-
-    if (!normalizedData) {
-      logger.error(`[${requestId}] TRACE: No normalized data found for workflow`, {
-        workflowId: foundWorkflow.id,
-        hasNormalizedData: false,
-      })
-      throw new Error(`Workflow ${foundWorkflow.id} data not found in normalized tables`)
+    // Basic validation first
+    if (!hmacSecret || !signature || !body) {
+      return false
     }
 
-    // Use normalized data for execution
-    const { blocks, edges, loops, parallels } = normalizedData
-    logger.info(`[${requestId}] Loaded workflow ${foundWorkflow.id} from normalized tables`)
-
-    // DEBUG: Log state information
-    logger.debug(`[${requestId}] TRACE: Retrieved workflow state from normalized tables`, {
-      workflowId: foundWorkflow.id,
-      blockCount: Object.keys(blocks || {}).length,
-      edgeCount: (edges || []).length,
-      loopCount: Object.keys(loops || {}).length,
-    })
-
-    logger.debug(
-      `[${requestId}] Merging subblock states for workflow ${foundWorkflow.id} (Execution: ${executionId})`
-    )
-
-    const mergeStartTime = Date.now()
-    const mergedStates = await mergeSubblockStateAsync(blocks, foundWorkflow.id)
-    logger.debug(`[${requestId}] TRACE: State merging complete`, {
-      duration: `${Date.now() - mergeStartTime}ms`,
-      mergedBlockCount: Object.keys(mergedStates).length,
-    })
-
-    // Retrieve and decrypt environment variables
-    const [userEnv] = await db
-      .select()
-      .from(environmentTable)
-      .where(eq(environmentTable.userId, foundWorkflow.userId))
-      .limit(1)
-    let decryptedEnvVars: Record<string, string> = {}
-    if (userEnv) {
-      // Decryption logic
-      const decryptionPromises = Object.entries((userEnv.variables as any) || {}).map(
-        async ([key, encryptedValue]) => {
-          try {
-            const { decrypted } = await decryptSecret(encryptedValue as string)
-            return [key, decrypted] as const
-          } catch (error: any) {
-            logger.error(
-              `[${requestId}] Failed to decrypt environment variable "${key}" (Execution: ${executionId})`,
-              error
-            )
-            throw new Error(`Failed to decrypt environment variable "${key}": ${error.message}`)
-          }
-        }
-      )
-      const decryptedEntries = await Promise.all(decryptionPromises)
-      decryptedEnvVars = Object.fromEntries(decryptedEntries)
-    } else {
-      logger.debug(`[${requestId}] TRACE: No environment variables found for user`, {
-        userId: foundWorkflow.userId,
-      })
+    // Check if signature has correct format
+    if (!signature.startsWith('HMAC ')) {
+      return false
     }
 
-    await loggingSession.safeStart({
-      userId: foundWorkflow.userId,
-      workspaceId: foundWorkflow.workspaceId,
-      variables: decryptedEnvVars,
-    })
+    const providedSignature = signature.substring(5) // Remove 'HMAC ' prefix
 
-    // Process block states (extract subBlock values, parse responseFormat)
-    const blockStatesStartTime = Date.now()
-    const currentBlockStates = Object.entries(mergedStates).reduce(
-      (acc, [id, block]) => {
-        acc[id] = Object.entries(block.subBlocks).reduce(
-          (subAcc, [key, subBlock]) => {
-            subAcc[key] = subBlock.value
-            return subAcc
-          },
-          {} as Record<string, any>
-        )
-        return acc
-      },
-      {} as Record<string, Record<string, any>>
-    )
+    // Compute HMAC SHA256 signature using Node.js crypto
+    const crypto = require('crypto')
+    const secretBytes = Buffer.from(hmacSecret, 'base64')
+    const bodyBytes = Buffer.from(body, 'utf8')
+    const computedHash = crypto.createHmac('sha256', secretBytes).update(bodyBytes).digest('base64')
 
-    const processedBlockStates = Object.entries(currentBlockStates).reduce(
-      (acc, [blockId, blockState]) => {
-        const processedState = { ...blockState }
-        if (processedState.responseFormat) {
-          try {
-            if (typeof processedState.responseFormat === 'string') {
-              processedState.responseFormat = JSON.parse(processedState.responseFormat)
-            }
-            if (
-              processedState.responseFormat &&
-              typeof processedState.responseFormat === 'object'
-            ) {
-              if (!processedState.responseFormat.schema && !processedState.responseFormat.name) {
-                processedState.responseFormat = {
-                  name: 'response_schema',
-                  schema: processedState.responseFormat,
-                  strict: true,
-                }
-              }
-            }
-            acc[blockId] = processedState
-          } catch (error) {
-            logger.warn(
-              `[${requestId}] Failed to parse responseFormat for block ${blockId} (Execution: ${executionId})`,
-              error
-            )
-            acc[blockId] = blockState
-          }
-        } else {
-          acc[blockId] = blockState
-        }
-        return acc
-      },
-      {} as Record<string, Record<string, any>>
-    )
-
-    // DEBUG: Log block state processing
-    logger.debug(`[${requestId}] TRACE: Block states processed`, {
-      duration: `${Date.now() - blockStatesStartTime}ms`,
-      blockCount: Object.keys(processedBlockStates).length,
-    })
-
-    // Serialize and get workflow variables
-    const serializeStartTime = Date.now()
-    const serializedWorkflow = new Serializer().serializeWorkflow(
-      mergedStates as any,
-      edges,
-      loops,
-      parallels
-    )
-    let workflowVariables = {}
-    if (foundWorkflow.variables) {
-      try {
-        if (typeof foundWorkflow.variables === 'string') {
-          workflowVariables = JSON.parse(foundWorkflow.variables)
-        } else {
-          workflowVariables = foundWorkflow.variables
-        }
-      } catch (error) {
-        logger.error(
-          `[${requestId}] Failed to parse workflow variables: ${foundWorkflow.id} (Execution: ${executionId})`,
-          error
-        )
-      }
+    // Constant-time comparison to prevent timing attacks
+    if (computedHash.length !== providedSignature.length) {
+      return false
     }
 
-    // DEBUG: Log serialization completion
-    logger.debug(`[${requestId}] TRACE: Workflow serialized`, {
-      duration: `${Date.now() - serializeStartTime}ms`,
-      hasWorkflowVars: Object.keys(workflowVariables).length > 0,
-    })
-
-    logger.debug(`[${requestId}] Starting workflow execution`, {
-      executionId,
-      blockCount: Object.keys(processedBlockStates).length,
-    })
-
-    // Log blocks for debugging (if any missing or invalid)
-    if (Object.keys(processedBlockStates).length === 0) {
-      logger.error(`[${requestId}] No blocks found in workflow state - this will likely fail`)
-    } else {
-      logger.debug(`[${requestId}] Block IDs for execution:`, {
-        blockIds: Object.keys(processedBlockStates).slice(0, 5), // Log just a few block IDs for debugging
-        totalBlocks: Object.keys(processedBlockStates).length,
-      })
+    let result = 0
+    for (let i = 0; i < computedHash.length; i++) {
+      result |= computedHash.charCodeAt(i) ^ providedSignature.charCodeAt(i)
     }
 
-    // Ensure workflow variables exist
-    if (!workflowVariables || Object.keys(workflowVariables).length === 0) {
-      logger.debug(`[${requestId}] No workflow variables defined, using empty object`)
-      workflowVariables = {}
-    }
-
-    // Validate input format for Airtable webhooks to prevent common errors
-    if (
-      input?.airtableChanges &&
-      (!Array.isArray(input.airtableChanges) || input.airtableChanges.length === 0)
-    ) {
-      logger.warn(
-        `[${requestId}] Invalid Airtable input format - airtableChanges should be a non-empty array`
-      )
-    }
-
-    // DEBUG: Log critical moment before executor creation
-    logger.info(`[${requestId}] TRACE: Creating workflow executor`, {
-      workflowId: foundWorkflow.id,
-      hasSerializedWorkflow: !!serializedWorkflow,
-      blockCount: Object.keys(processedBlockStates).length,
-      timestamp: new Date().toISOString(),
-    })
-
-    const executor = new Executor(
-      serializedWorkflow,
-      processedBlockStates,
-      decryptedEnvVars,
-      input,
-      workflowVariables
-    )
-
-    // Set up enhanced logging on the executor
-    loggingSession.setupExecutor(executor)
-
-    // Log workflow execution start time for tracking
-    const executionStartTime = Date.now()
-    logger.info(`[${requestId}] TRACE: Executor instantiated, starting workflow execution now`, {
-      workflowId: foundWorkflow.id,
-      timestamp: new Date().toISOString(),
-    })
-
-    // Add direct detailed logging right before executing
-    logger.info(
-      `[${requestId}] EXECUTION_MONITOR: About to call executor.execute() - CRITICAL POINT`,
-      {
-        workflowId: foundWorkflow.id,
-        executionId: executionId,
-        timestamp: new Date().toISOString(),
-      }
-    )
-
-    // This is THE critical line where the workflow actually executes
-    const result = await executor.execute(foundWorkflow.id)
-
-    // Check if we got a StreamingExecution result (with stream + execution properties)
-    // For webhook executions, we only care about the ExecutionResult part, not the stream
-    const executionResult = 'stream' in result && 'execution' in result ? result.execution : result
-
-    // Add direct detailed logging right after executing
-    logger.info(`[${requestId}] EXECUTION_MONITOR: executor.execute() completed with result`, {
-      workflowId: foundWorkflow.id,
-      executionId: executionId,
-      success: executionResult.success,
-      resultType: result ? typeof result : 'undefined',
-      timestamp: new Date().toISOString(),
-    })
-
-    // Log completion and timing
-    const executionDuration = Date.now() - executionStartTime
-    logger.info(`[${requestId}] TRACE: Workflow execution completed`, {
-      workflowId: foundWorkflow.id,
-      success: executionResult.success,
-      duration: `${executionDuration}ms`,
-      actualDurationMs: executionDuration,
-      timestamp: new Date().toISOString(),
-    })
-
-    logger.info(`[${requestId}] Workflow execution finished`, {
-      executionId,
-      success: executionResult.success,
-      durationMs: executionResult.metadata?.duration || executionDuration,
-      actualDurationMs: executionDuration,
-    })
-
-    // Update counts and stats if successful
-    if (executionResult.success) {
-      await updateWorkflowRunCounts(foundWorkflow.id)
-      await db
-        .update(userStats)
-        .set({
-          totalWebhookTriggers: sql`total_webhook_triggers + 1`,
-          lastActive: new Date(),
-        })
-        .where(eq(userStats.userId, foundWorkflow.userId))
-    }
-
-    // Calculate total duration for enhanced logging
-    const totalDuration = executionResult.metadata?.duration || 0
-
-    const traceSpans = (executionResult.logs || []).map((blockLog: any, index: number) => {
-      let output = blockLog.output
-      if (!blockLog.success && blockLog.error) {
-        output = {
-          error: blockLog.error,
-          success: false,
-          ...(blockLog.output || {}),
-        }
-      }
-
-      return {
-        id: blockLog.blockId,
-        name: `Block ${blockLog.blockName || blockLog.blockType} (${blockLog.blockType || 'unknown'})`,
-        type: blockLog.blockType || 'unknown',
-        duration: blockLog.durationMs || 0,
-        startTime: blockLog.startedAt,
-        endTime: blockLog.endedAt || blockLog.startedAt,
-        status: blockLog.success ? 'success' : 'error',
-        blockId: blockLog.blockId,
-        input: blockLog.input,
-        output: output,
-        tokens: blockLog.output?.tokens?.total || 0,
-        relativeStartMs: index * 100,
-        children: [],
-        toolCalls: (blockLog as any).toolCalls || [],
-      }
-    })
-
-    await loggingSession.safeComplete({
-      endedAt: new Date().toISOString(),
-      totalDurationMs: totalDuration || 0,
-      finalOutput: executionResult.output || {},
-      traceSpans: (traceSpans || []) as any,
-    })
-
-    // DEBUG: Final success log
-    logger.info(`[${requestId}] TRACE: Execution logs persisted successfully`, {
-      workflowId: foundWorkflow.id,
-      executionId,
-      timestamp: new Date().toISOString(),
-    })
-  } catch (error: any) {
-    // DEBUG: Detailed error information
-    logger.error(`[${requestId}] TRACE: Error during workflow execution`, {
-      workflowId: foundWorkflow.id,
-      executionId,
-      errorType: error.constructor.name,
-      errorMessage: error.message,
-      stack: error.stack,
-      timestamp: new Date().toISOString(),
-    })
-
-    logger.error(`[${requestId}] Error executing workflow`, {
-      workflowId: foundWorkflow.id,
-      executionId,
-      error: error.message,
-      stack: error.stack,
-    })
-    // Error logging handled by enhanced logging session
-
-    await loggingSession.safeCompleteWithError({
-      endedAt: new Date().toISOString(),
-      totalDurationMs: 0,
-      error: {
-        message: error.message || 'Webhook workflow execution failed',
-        stackTrace: error.stack,
-      },
-    })
-
-    // Re-throw the error so the caller knows it failed
-    throw error
+    return result === 0
+  } catch (error) {
+    console.error('Error validating Microsoft Teams signature:', error)
+    return false
   }
 }
 
@@ -849,6 +509,10 @@ export function verifyProviderWebhook(
 
       break
     }
+    case 'microsoftteams':
+      // Microsoft Teams webhook authentication is handled separately in the main flow
+      // due to the need for raw body access for HMAC verification
+      break
     case 'generic':
       // Generic auth logic: requireAuth, token, secretHeaderName, allowedIps
       if (providerConfig.requireAuth) {
@@ -915,7 +579,7 @@ export async function fetchAndProcessAirtablePayloads(
   workflowData: any,
   requestId: string // Original request ID from the ping, used for the final execution log
 ) {
-  // Enhanced logging handles all error logging
+  // Logging handles all error logging
   let currentCursor: number | null = null
   let mightHaveMore = true
   let payloadsFetched = 0 // Track total payloads fetched
@@ -943,7 +607,7 @@ export async function fetchAndProcessAirtablePayloads(
       logger.error(
         `[${requestId}] Missing baseId or externalId in providerConfig for webhook ${webhookData.id}. Cannot fetch payloads.`
       )
-      // Error logging handled by enhanced logging session
+      // Error logging handled by logging session
       return // Exit early
     }
 
@@ -979,7 +643,7 @@ export async function fetchAndProcessAirtablePayloads(
           error: initError.message,
           stack: initError.stack,
         })
-        // Error logging handled by enhanced logging session
+        // Error logging handled by logging session
       }
     }
 
@@ -1017,7 +681,7 @@ export async function fetchAndProcessAirtablePayloads(
           userId: workflowData.userId,
         }
       )
-      // Error logging handled by enhanced logging session
+      // Error logging handled by logging session
       return // Exit early
     }
 
@@ -1081,7 +745,7 @@ export async function fetchAndProcessAirtablePayloads(
               error: errorMessage,
             }
           )
-          // Error logging handled by enhanced logging session
+          // Error logging handled by logging session
           mightHaveMore = false
           break
         }
@@ -1225,7 +889,7 @@ export async function fetchAndProcessAirtablePayloads(
               cursor: currentCursor,
               error: dbError.message,
             })
-            // Error logging handled by enhanced logging session
+            // Error logging handled by logging session
             mightHaveMore = false
             throw new Error('Failed to save Airtable cursor, stopping processing.') // Re-throw to break loop clearly
           }
@@ -1245,7 +909,7 @@ export async function fetchAndProcessAirtablePayloads(
           `[${requestId}] Network error calling Airtable GET /payloads (Call ${apiCallCount}) for webhook ${webhookData.id}`,
           fetchError
         )
-        // Error logging handled by enhanced logging session
+        // Error logging handled by logging session
         mightHaveMore = false
         break
       }
@@ -1275,28 +939,23 @@ export async function fetchAndProcessAirtablePayloads(
           }
         )
 
-        // Execute using the original requestId as the executionId
-        // This is the exact point in the old code where execution happens - we're matching it exactly
-        await executeWorkflowFromPayload(workflowData, input, requestId, requestId)
-
-        // COMPLETION LOG - This will only appear if execution succeeds
-        logger.info(`[${requestId}] CRITICAL_TRACE: Workflow execution completed successfully`, {
+        // Return the processed input for the trigger.dev task to handle
+        logger.info(`[${requestId}] CRITICAL_TRACE: Airtable changes processed, returning input`, {
           workflowId: workflowData.id,
-          timestamp: new Date().toISOString(),
-        })
-      } catch (executionError: any) {
-        // Errors logged within executeWorkflowFromPayload
-        logger.error(`[${requestId}] CRITICAL_TRACE: Workflow execution failed with error`, {
-          workflowId: workflowData.id,
-          error: executionError.message,
-          stack: executionError.stack,
+          recordCount: finalConsolidatedChanges.length,
           timestamp: new Date().toISOString(),
         })
 
-        logger.error(
-          `[${requestId}] Error during workflow execution triggered by Airtable polling`,
-          executionError
-        )
+        return input
+      } catch (processingError: any) {
+        logger.error(`[${requestId}] CRITICAL_TRACE: Error processing Airtable changes`, {
+          workflowId: workflowData.id,
+          error: processingError.message,
+          stack: processingError.stack,
+          timestamp: new Date().toISOString(),
+        })
+
+        throw processingError
       }
     } else {
       // DEBUG: Log when no changes are found
@@ -1316,7 +975,7 @@ export async function fetchAndProcessAirtablePayloads(
         error: (error as Error).message,
       }
     )
-    // Error logging handled by enhanced logging session
+    // Error logging handled by logging session
   }
 
   // DEBUG: Log function completion
@@ -1326,117 +985,6 @@ export async function fetchAndProcessAirtablePayloads(
     totalChanges: consolidatedChangesMap.size,
     timestamp: new Date().toISOString(),
   })
-}
-
-/**
- * Process webhook verification and authorization
- */
-export async function processWebhook(
-  foundWebhook: any,
-  foundWorkflow: any,
-  body: any,
-  request: NextRequest,
-  executionId: string,
-  requestId: string
-): Promise<NextResponse> {
-  try {
-    // --- Handle Airtable differently - it should always use fetchAndProcessAirtablePayloads ---
-    if (foundWebhook.provider === 'airtable') {
-      logger.info(`[${requestId}] Routing Airtable webhook through dedicated processor`)
-
-      // Use the dedicated Airtable payload fetcher and processor
-      await fetchAndProcessAirtablePayloads(foundWebhook, foundWorkflow, requestId)
-
-      // Return standard success response
-      return NextResponse.json({ message: 'Airtable webhook processed' }, { status: 200 })
-    }
-
-    // --- Provider-specific Auth/Verification (excluding Airtable/WhatsApp/Slack handled earlier) ---
-    if (
-      foundWebhook.provider &&
-      !['airtable', 'whatsapp', 'slack'].includes(foundWebhook.provider)
-    ) {
-      const verificationResponse = verifyProviderWebhook(foundWebhook, request, requestId)
-      if (verificationResponse) {
-        return verificationResponse
-      }
-    }
-
-    // --- Format Input based on provider (excluding Airtable) ---
-    const input = formatWebhookInput(foundWebhook, foundWorkflow, body, request)
-
-    if (!input && foundWebhook.provider === 'whatsapp') {
-      return new NextResponse('No messages in WhatsApp payload', { status: 200 })
-    }
-
-    // --- Execute Workflow ---
-    logger.info(
-      `[${requestId}] Executing workflow ${foundWorkflow.id} for webhook ${foundWebhook.id} (Execution: ${executionId})`
-    )
-    // Call the refactored execution function
-    await executeWorkflowFromPayload(foundWorkflow, input, executionId, requestId)
-
-    // Since executeWorkflowFromPayload handles logging and errors internally,
-    // we just need to return a standard success response for synchronous webhooks.
-    // Note: The actual result isn't typically returned in the webhook response itself.
-    return NextResponse.json({ message: 'Webhook processed' }, { status: 200 })
-  } catch (error: any) {
-    // Catch errors *before* calling executeWorkflowFromPayload (e.g., auth errors)
-    logger.error(
-      `[${requestId}] Error in processWebhook *before* execution for ${foundWebhook.id} (Execution: ${executionId})`,
-      error
-    )
-    return new NextResponse(`Internal Server Error: ${error.message}`, {
-      status: 500,
-    })
-  }
-}
-
-/**
- * Generate a hash for request deduplication
- */
-export async function generateRequestHash(path: string, body: any): Promise<string> {
-  try {
-    const normalizedBody = normalizeBody(body)
-    const requestString = `${path}:${JSON.stringify(normalizedBody)}`
-    let hash = 0
-    for (let i = 0; i < requestString.length; i++) {
-      const char = requestString.charCodeAt(i)
-      hash = (hash << 5) - hash + char
-      hash = hash & hash // Convert to 32bit integer
-    }
-    return `request:${path}:${hash}`
-  } catch (_error) {
-    return `request:${path}:${uuidv4()}`
-  }
-}
-
-/**
- * Normalize the body for consistent hashing
- */
-export function normalizeBody(body: any): any {
-  if (!body || typeof body !== 'object') return body
-  const result = Array.isArray(body) ? [...body] : { ...body }
-  const fieldsToRemove = [
-    'timestamp',
-    'random',
-    'nonce',
-    'requestId',
-    'event_id',
-    'event_time' /* Add other volatile fields */,
-  ] // Made case-insensitive check below
-  if (Array.isArray(result)) {
-    return result.map((item) => normalizeBody(item))
-  }
-  for (const key in result) {
-    // Use lowercase check for broader matching
-    if (fieldsToRemove.includes(key.toLowerCase())) {
-      delete result[key]
-    } else if (typeof result[key] === 'object' && result[key] !== null) {
-      result[key] = normalizeBody(result[key])
-    }
-  }
-  return result
 }
 
 // Define an interface for AirtableChange

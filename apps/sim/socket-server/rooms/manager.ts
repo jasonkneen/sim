@@ -3,7 +3,7 @@ import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
 import type { Server } from 'socket.io'
 import { env } from '@/lib/env'
-import { createLogger } from '@/lib/logs/console-logger'
+import { createLogger } from '@/lib/logs/console/logger'
 import * as schema from '@/db/schema'
 import { workflowBlocks, workflowEdges } from '@/db/schema'
 
@@ -13,8 +13,8 @@ const db = drizzle(
   postgres(connectionString, {
     prepare: false,
     idle_timeout: 15,
-    connect_timeout: 20, // Increase connection timeout for room operations
-    max: 1, // Minimal pool for room operations to conserve connections
+    connect_timeout: 20,
+    max: 5,
     onnotice: () => {},
   }),
   { schema }
@@ -128,6 +128,54 @@ export class RoomManager {
     room.lastModified = timestamp
 
     logger.info(`Notified ${room.users.size} users about workflow revert: ${workflowId}`)
+  }
+
+  handleWorkflowUpdate(workflowId: string) {
+    logger.info(`Handling workflow update notification for ${workflowId}`)
+
+    const room = this.workflowRooms.get(workflowId)
+    if (!room) {
+      logger.debug(`No active room found for updated workflow ${workflowId}`)
+      return
+    }
+
+    const timestamp = Date.now()
+
+    // Notify all clients in the workflow room that the workflow has been updated
+    // This will trigger them to refresh their local state
+    this.io.to(workflowId).emit('workflow-updated', {
+      workflowId,
+      message: 'Workflow has been updated externally',
+      timestamp,
+    })
+
+    room.lastModified = timestamp
+
+    logger.info(`Notified ${room.users.size} users about workflow update: ${workflowId}`)
+  }
+
+  handleCopilotWorkflowEdit(workflowId: string, description?: string) {
+    logger.info(`Handling copilot workflow edit notification for ${workflowId}`)
+
+    const room = this.workflowRooms.get(workflowId)
+    if (!room) {
+      logger.debug(`No active room found for copilot workflow edit ${workflowId}`)
+      return
+    }
+
+    const timestamp = Date.now()
+
+    // Emit special event for copilot edits that tells clients to rehydrate from database
+    this.io.to(workflowId).emit('copilot-workflow-edit', {
+      workflowId,
+      description,
+      message: 'Copilot has edited the workflow - rehydrating from database',
+      timestamp,
+    })
+
+    room.lastModified = timestamp
+
+    logger.info(`Notified ${room.users.size} users about copilot workflow edit: ${workflowId}`)
   }
 
   async validateWorkflowConsistency(

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { logger } from '@trigger.dev/sdk/v3'
 import { PlusIcon, WrenchIcon, XIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -14,10 +15,31 @@ import { Toggle } from '@/components/ui/toggle'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import type { OAuthProvider, OAuthService } from '@/lib/oauth/oauth'
 import { cn } from '@/lib/utils'
+import {
+  ChannelSelectorInput,
+  CheckboxList,
+  Code,
+  ComboBox,
+  DateInput,
+  FileSelectorInput,
+  FileUpload,
+  LongInput,
+  ProjectSelectorInput,
+  ShortInput,
+  SliderInput,
+  Table,
+  TimeInput,
+} from '@/app/workspace/[workspaceId]/w/[workflowId]/components/workflow-block/components/sub-block/components'
+import {
+  type CustomTool,
+  CustomToolModal,
+} from '@/app/workspace/[workspaceId]/w/[workflowId]/components/workflow-block/components/sub-block/components/tool-input/components/custom-tool-modal/custom-tool-modal'
+import { ToolCommand } from '@/app/workspace/[workspaceId]/w/[workflowId]/components/workflow-block/components/sub-block/components/tool-input/components/tool-command/tool-command'
+import { ToolCredentialSelector } from '@/app/workspace/[workspaceId]/w/[workflowId]/components/workflow-block/components/sub-block/components/tool-input/components/tool-credential-selector'
+import { useSubBlockValue } from '@/app/workspace/[workspaceId]/w/[workflowId]/components/workflow-block/components/sub-block/hooks/use-sub-block-value'
 import { getAllBlocks } from '@/blocks'
 import { getProviderFromModel, supportsToolUsageControl } from '@/providers/utils'
 import { useCustomToolsStore } from '@/stores/custom-tools/store'
-import { useGeneralStore } from '@/stores/settings/general/store'
 import { useSubBlockStore } from '@/stores/workflows/subblock/store'
 import { useWorkflowStore } from '@/stores/workflows/workflow/store'
 import {
@@ -26,23 +48,6 @@ import {
   isPasswordParameter,
   type ToolParameterConfig,
 } from '@/tools/params'
-import { useSubBlockValue } from '../../hooks/use-sub-block-value'
-import { ChannelSelectorInput } from '../channel-selector/channel-selector-input'
-import { CheckboxList } from '../checkbox-list'
-import { Code } from '../code'
-import { ComboBox } from '../combobox'
-import { DateInput } from '../date-input'
-import { FileSelectorInput } from '../file-selector/file-selector-input'
-import { FileUpload } from '../file-upload'
-import { LongInput } from '../long-input'
-import { ProjectSelectorInput } from '../project-selector/project-selector-input'
-import { ShortInput } from '../short-input'
-import { SliderInput } from '../slider-input'
-import { Table } from '../table'
-import { TimeInput } from '../time-input'
-import { type CustomTool, CustomToolModal } from './components/custom-tool-modal/custom-tool-modal'
-import { ToolCommand } from './components/tool-command/tool-command'
-import { ToolCredentialSelector } from './components/tool-credential-selector'
 
 interface ToolInputProps {
   blockId: string
@@ -309,6 +314,10 @@ function CodeSyncWrapper({
         language={uiComponent.language}
         generationType={uiComponent.generationType}
         disabled={disabled}
+        wandConfig={{
+          enabled: false,
+          prompt: '',
+        }}
       />
     </GenericSyncWrapper>
   )
@@ -400,7 +409,6 @@ export function ToolInput({
   const isWide = useWorkflowStore((state) => state.blocks[blockId]?.isWide)
   const customTools = useCustomToolsStore((state) => state.getAllTools())
   const subBlockStore = useSubBlockStore()
-  const isAutoFillEnvVarsEnabled = useGeneralStore((state) => state.isAutoFillEnvVarsEnabled)
 
   // Get the current model from the 'model' subblock
   const modelValue = useSubBlockStore.getState().getValue(blockId, 'model')
@@ -408,7 +416,9 @@ export function ToolInput({
   const provider = model ? getProviderFromModel(model) : ''
   const supportsToolControl = provider ? supportsToolUsageControl(provider) : false
 
-  const toolBlocks = getAllBlocks().filter((block) => block.category === 'tools')
+  const toolBlocks = getAllBlocks().filter(
+    (block) => block.category === 'tools' && block.type !== 'evaluator'
+  )
 
   // Use preview value when in preview mode, otherwise use store value
   const value = isPreview ? previewValue : storeValue
@@ -507,26 +517,13 @@ export function ToolInput({
     return block.tools.access[0]
   }
 
-  // Initialize tool parameters with auto-fill if enabled
+  // Initialize tool parameters - no autofill, just return empty params
   const initializeToolParams = (
     toolId: string,
     params: ToolParameterConfig[],
     instanceId?: string
   ): Record<string, string> => {
-    const initialParams: Record<string, string> = {}
-
-    // Only auto-fill parameters if the setting is enabled
-    if (isAutoFillEnvVarsEnabled) {
-      // For each parameter, check if we have a stored/resolved value
-      params.forEach((param) => {
-        const resolvedValue = subBlockStore.resolveToolParamValue(toolId, param.id, instanceId)
-        if (resolvedValue) {
-          initialParams[param.id] = resolvedValue
-        }
-      })
-    }
-
-    return initialParams
+    return {}
   }
 
   const handleSelectTool = (toolBlock: (typeof toolBlocks)[0]) => {
@@ -682,11 +679,6 @@ export function ToolInput({
 
     const tool = selectedTools[toolIndex]
 
-    // Store the value in the tool params store for future use
-    if (paramValue.trim()) {
-      subBlockStore.setToolParam(tool.toolId, paramId, paramValue)
-    }
-
     // Update the value in the workflow
     setStoreValue(
       selectedTools.map((tool, index) =>
@@ -704,41 +696,46 @@ export function ToolInput({
   }
 
   const handleOperationChange = (toolIndex: number, operation: string) => {
-    console.log('🔄 handleOperationChange called:', { toolIndex, operation, isPreview, disabled })
-
     if (isPreview || disabled) {
-      console.log('❌ Early return: preview or disabled')
+      logger.info('❌ Early return: preview or disabled')
       return
     }
 
     const tool = selectedTools[toolIndex]
-    console.log('🔧 Current tool:', tool)
 
     const newToolId = getToolIdForOperation(tool.type, operation)
-    console.log('🆔 getToolIdForOperation result:', { toolType: tool.type, operation, newToolId })
 
     if (!newToolId) {
-      console.log('❌ Early return: no newToolId')
+      logger.info('❌ Early return: no newToolId')
       return
     }
 
     // Get parameters for the new tool
     const toolParams = getToolParametersConfig(newToolId, tool.type)
-    console.log('📋 getToolParametersConfig result:', {
-      newToolId,
-      toolType: tool.type,
-      toolParams,
-    })
 
     if (!toolParams) {
-      console.log('❌ Early return: no toolParams')
+      logger.info('❌ Early return: no toolParams')
       return
     }
 
     // Initialize parameters for the new operation
     const initialParams = initializeToolParams(newToolId, toolParams.userInputParameters, blockId)
 
-    // Clear fields when operation changes for Jira
+    // Preserve ALL existing parameters that also exist in the new tool configuration
+    // This mimics how regular blocks work - each field maintains its state independently
+    const oldToolParams = getToolParametersConfig(tool.toolId, tool.type)
+    const oldParamIds = new Set(oldToolParams?.userInputParameters.map((p) => p.id) || [])
+    const newParamIds = new Set(toolParams.userInputParameters.map((p) => p.id))
+
+    // Preserve any parameter that exists in both configurations and has a value
+    const preservedParams: Record<string, string> = {}
+    Object.entries(tool.params).forEach(([paramId, value]) => {
+      if (newParamIds.has(paramId) && value) {
+        preservedParams[paramId] = value
+      }
+    })
+
+    // Clear fields when operation changes for Jira (special case)
     if (tool.type === 'jira') {
       const subBlockStore = useSubBlockStore.getState()
       // Clear all fields that might be shared between operations
@@ -756,7 +753,7 @@ export function ToolInput({
               ...tool,
               toolId: newToolId,
               operation,
-              params: initialParams, // Reset params when operation changes
+              params: { ...initialParams, ...preservedParams }, // Preserve all compatible existing values
             }
           : tool
       )
@@ -1026,9 +1023,9 @@ export function ToolInput({
       case 'channel-selector':
         return (
           <ChannelSelectorInput
-            blockId={uniqueBlockId}
+            blockId={blockId}
             subBlock={{
-              id: param.id,
+              id: `tool-${toolIndex || 0}-${param.id}`,
               type: 'channel-selector' as const,
               title: param.id,
               provider: uiComponent.provider || 'slack',
@@ -1043,9 +1040,9 @@ export function ToolInput({
       case 'project-selector':
         return (
           <ProjectSelectorInput
-            blockId={uniqueBlockId}
+            blockId={blockId}
             subBlock={{
-              id: param.id,
+              id: `tool-${toolIndex || 0}-${param.id}`,
               type: 'project-selector' as const,
               title: param.id,
               provider: uiComponent.provider || 'jira',
@@ -1365,8 +1362,7 @@ export function ToolInput({
             const requiresOAuth = !isCustomTool && toolRequiresOAuth(currentToolId)
             const oauthConfig = !isCustomTool ? getToolOAuthConfig(currentToolId) : null
 
-            // Check if the tool has any expandable content
-            const hasExpandableContent = isCustomTool || displayParams.length > 0 || requiresOAuth
+            // Tools are always expandable so users can access the interface
 
             return (
               <div
@@ -1401,12 +1397,12 @@ export function ToolInput({
                   <div
                     className={cn(
                       'flex items-center justify-between bg-accent/50 p-2',
-                      hasExpandableContent ? 'cursor-pointer' : 'cursor-default'
+                      'cursor-pointer'
                     )}
                     onClick={() => {
                       if (isCustomTool) {
                         handleEditCustomTool(toolIndex)
-                      } else if (hasExpandableContent) {
+                      } else {
                         toggleToolExpansion(toolIndex)
                       }
                     }}
@@ -1515,7 +1511,7 @@ export function ToolInput({
                     </div>
                   </div>
 
-                  {!isCustomTool && hasExpandableContent && tool.isExpanded && (
+                  {!isCustomTool && tool.isExpanded && (
                     <div className='space-y-3 overflow-visible p-3'>
                       {/* Operation dropdown for tools with multiple operations */}
                       {(() => {
@@ -1652,7 +1648,7 @@ export function ToolInput({
                                 {param.required && param.visibility === 'user-only' && (
                                   <span className='ml-1 text-red-500'>*</span>
                                 )}
-                                {!param.required && (
+                                {(!param.required || param.visibility !== 'user-only') && (
                                   <span className='ml-1 text-muted-foreground/60 text-xs'>
                                     (Optional)
                                   </span>

@@ -1,8 +1,6 @@
 import { FirecrawlIcon } from '@/components/icons'
-import type { ScrapeResponse, SearchResponse } from '@/tools/firecrawl/types'
-import type { BlockConfig } from '../types'
-
-type FirecrawlResponse = ScrapeResponse | SearchResponse
+import type { BlockConfig } from '@/blocks/types'
+import type { FirecrawlResponse } from '@/tools/firecrawl/types'
 
 export const FirecrawlBlock: BlockConfig<FirecrawlResponse> = {
   type: 'firecrawl',
@@ -10,7 +8,7 @@ export const FirecrawlBlock: BlockConfig<FirecrawlResponse> = {
   description: 'Scrape or search the web',
   longDescription:
     'Extract content from any website with advanced web scraping or search the web for information. Retrieve clean, structured data from web pages with options to focus on main content, or intelligently search for information across the web.',
-  docsLink: 'https://docs.simstudio.ai/tools/firecrawl',
+  docsLink: 'https://docs.sim.ai/tools/firecrawl',
   category: 'tools',
   bgColor: '#181C1E',
   icon: FirecrawlIcon,
@@ -23,6 +21,7 @@ export const FirecrawlBlock: BlockConfig<FirecrawlResponse> = {
       options: [
         { label: 'Scrape', id: 'scrape' },
         { label: 'Search', id: 'search' },
+        { label: 'Crawl', id: 'crawl' },
       ],
       value: () => 'scrape',
     },
@@ -31,11 +30,12 @@ export const FirecrawlBlock: BlockConfig<FirecrawlResponse> = {
       title: 'Website URL',
       type: 'short-input',
       layout: 'full',
-      placeholder: 'Enter the webpage URL to scrape',
+      placeholder: 'Enter the website URL',
       condition: {
         field: 'operation',
-        value: 'scrape',
+        value: ['scrape', 'crawl'],
       },
+      required: true,
     },
     {
       id: 'onlyMainContent',
@@ -48,6 +48,17 @@ export const FirecrawlBlock: BlockConfig<FirecrawlResponse> = {
       },
     },
     {
+      id: 'limit',
+      title: 'Page Limit',
+      type: 'short-input',
+      layout: 'half',
+      placeholder: '100',
+      condition: {
+        field: 'operation',
+        value: 'crawl',
+      },
+    },
+    {
       id: 'query',
       title: 'Search Query',
       type: 'short-input',
@@ -57,6 +68,7 @@ export const FirecrawlBlock: BlockConfig<FirecrawlResponse> = {
         field: 'operation',
         value: 'search',
       },
+      required: true,
     },
     {
       id: 'apiKey',
@@ -65,10 +77,11 @@ export const FirecrawlBlock: BlockConfig<FirecrawlResponse> = {
       layout: 'full',
       placeholder: 'Enter your Firecrawl API key',
       password: true,
+      required: true,
     },
   ],
   tools: {
-    access: ['firecrawl_scrape', 'firecrawl_search'],
+    access: ['firecrawl_scrape', 'firecrawl_search', 'firecrawl_crawl'],
     config: {
       tool: (params) => {
         switch (params.operation) {
@@ -76,26 +89,46 @@ export const FirecrawlBlock: BlockConfig<FirecrawlResponse> = {
             return 'firecrawl_scrape'
           case 'search':
             return 'firecrawl_search'
+          case 'crawl':
+            return 'firecrawl_crawl'
           default:
             return 'firecrawl_scrape'
+        }
+      },
+      params: (params) => {
+        const { operation, limit, ...rest } = params
+
+        switch (operation) {
+          case 'crawl':
+            return {
+              ...rest,
+              limit: limit ? Number.parseInt(limit) : undefined,
+            }
+          default:
+            return rest
         }
       },
     },
   },
   inputs: {
-    apiKey: { type: 'string', required: true },
-    operation: { type: 'string', required: true },
-    url: { type: 'string', required: false },
-    query: { type: 'string', required: false },
-    scrapeOptions: { type: 'json', required: false },
+    apiKey: { type: 'string', description: 'Firecrawl API key' },
+    operation: { type: 'string', description: 'Operation to perform' },
+    url: { type: 'string', description: 'Target website URL' },
+    limit: { type: 'string', description: 'Page crawl limit' },
+    query: { type: 'string', description: 'Search query terms' },
+    scrapeOptions: { type: 'json', description: 'Scraping options' },
   },
   outputs: {
     // Scrape output
-    markdown: 'string',
-    html: 'any',
-    metadata: 'json',
+    markdown: { type: 'string', description: 'Page content markdown' },
+    html: { type: 'any', description: 'Raw HTML content' },
+    metadata: { type: 'json', description: 'Page metadata' },
     // Search output
-    data: 'json',
-    warning: 'any',
+    data: { type: 'json', description: 'Search results data' },
+    warning: { type: 'any', description: 'Warning messages' },
+    // Crawl output
+    pages: { type: 'json', description: 'Crawled pages data' },
+    total: { type: 'number', description: 'Total pages found' },
+    creditsUsed: { type: 'number', description: 'Credits consumed' },
   },
 }
