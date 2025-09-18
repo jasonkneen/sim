@@ -138,11 +138,12 @@ export const ParallelNodeComponent = memo(({ data, selected, id }: NodeProps) =>
           className={cn(
             'relative cursor-default select-none',
             'transition-block-bg transition-ring',
+            'rounded-2xl border-border border-[4px]',
             'z-[20]',
             data?.state === 'valid',
             nestingLevel > 0 &&
-              `border border-[0.5px] ${nestingLevel % 2 === 0 ? 'border-slate-300/60' : 'border-slate-400/60'}`,
-            data?.hasNestedError && 'border-2 border-red-500 bg-red-50/50'
+              `${nestingLevel % 2 === 0 ? 'border-slate-300/60' : 'border-slate-400/60'}`,
+            data?.hasNestedError && 'border-red-500 bg-red-50/50'
           )}
           style={{
             width: data.width || 500,

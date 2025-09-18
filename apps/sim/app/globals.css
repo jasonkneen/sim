@@ -162,6 +162,7 @@
     overscroll-behavior-x: none;
     overscroll-behavior-y: none;
     min-height: 100vh;
+    font-family: 'LG Smart_0521_HS98', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     /* Prevent layout shifts when scrollbar appears/disappears */
     scrollbar-gutter: stable;
     /* Improve animation performance */
@@ -203,7 +204,8 @@
 }
 
 .font-geist-mono {
-  font-family: var(--font-geist-mono);
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, SFMono, Menlo, Monaco,
+    Consolas, 'Liberation Mono', 'Courier New', monospace;
 }
 
 /* ==========================================================================

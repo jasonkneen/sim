@@ -451,6 +451,7 @@ export function WorkflowBlock({ id, data }: NodeProps<WorkflowBlockProps>) {
         className={cn(
           'relative cursor-default select-none shadow-md',
           'transition-block-bg transition-ring',
+          'rounded-2xl border-border border-[4px]',
           isWide ? 'w-[480px]' : 'w-[320px]',
           !isEnabled && 'shadow-sm',
           isActive && 'animate-pulse-ring ring-2 ring-blue-500',
@@ -466,8 +467,8 @@ export function WorkflowBlock({ id, data }: NodeProps<WorkflowBlockProps>) {
         )}
 
         <ActionBar blockId={id} blockType={type} disabled={!userPermissions.canEdit} />
-        {/* Connection Blocks - Don't show for trigger blocks or starter blocks */}
-        {config.category !== 'triggers' && type !== 'starter' && (
+        {/* Connection Blocks - show alongside node when using vertical handles */}
+        {config.category !== 'triggers' && type !== 'starter' && !horizontalHandles && (
           <ConnectionBlocks
             blockId={id}
             setIsConnecting={setIsConnecting}
@@ -802,6 +803,16 @@ export function WorkflowBlock({ id, data }: NodeProps<WorkflowBlockProps>) {
               ))
             : null}
         </div>
+
+        {/* Connection Blocks - for horizontal handle mode render beneath the content */}
+        {config.category !== 'triggers' && type !== 'starter' && horizontalHandles && (
+          <ConnectionBlocks
+            blockId={id}
+            setIsConnecting={setIsConnecting}
+            isDisabled={!userPermissions.canEdit}
+            horizontalHandles={horizontalHandles}
+          />
+        )}
 
         {/* Output Handle */}
         {type !== 'condition' && type !== 'response' && (

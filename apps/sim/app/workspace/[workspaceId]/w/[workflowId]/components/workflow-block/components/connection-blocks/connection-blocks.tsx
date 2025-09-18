@@ -129,12 +129,17 @@ export function ConnectionBlocks({
     connectionCards.push(renderConnectionCard(connection))
   })
 
-  // Position and layout based on handle orientation - reverse of ports
-  // When ports are horizontal: connection blocks on top, aligned to left, closest blocks on bottom row
-  // When ports are vertical (default): connection blocks on left, stack vertically, aligned to right
-  const containerClasses = horizontalHandles
-    ? 'absolute bottom-full left-0 flex max-w-[600px] flex-wrap-reverse gap-2 pb-3'
-    : 'absolute top-0 right-full flex max-h-[400px] max-w-[200px] flex-col items-end gap-2 overflow-y-auto pr-3'
+  if (horizontalHandles) {
+    return (
+      <div className='px-4 pb-4'>
+        <div className='flex w-full flex-wrap items-center gap-2 pt-2'>{connectionCards}</div>
+      </div>
+    )
+  }
 
-  return <div className={containerClasses}>{connectionCards}</div>
+  return (
+    <div className='absolute top-0 right-full flex max-h-[400px] max-w-[200px] flex-col items-end gap-2 overflow-y-auto pr-3'>
+      {connectionCards}
+    </div>
+  )
 }

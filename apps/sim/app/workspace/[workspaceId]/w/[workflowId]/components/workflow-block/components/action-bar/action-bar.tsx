@@ -37,9 +37,9 @@ export function ActionBar({ blockId, blockType, disabled = false }: ActionBarPro
   return (
     <div
       className={cn(
-        '-right-20 absolute top-0',
-        'flex flex-col items-center gap-2 p-2',
-        'rounded-md border border-gray-200 bg-background shadow-sm dark:border-gray-800',
+        'absolute top-0 left-1/2 -translate-x-1/2 -translate-y-full -translate-y-[5px]',
+        'z-30 flex items-center gap-1.5 rounded-full px-2.5 py-1',
+        'rounded-full border border-gray-200 bg-background shadow-sm dark:border-gray-800',
         'opacity-0 transition-opacity duration-200 group-hover:opacity-100'
       )}
     >
@@ -70,7 +70,10 @@ export function ActionBar({ blockId, blockType, disabled = false }: ActionBarPro
                 collaborativeToggleBlockEnabled(blockId)
               }
             }}
-            className={cn('text-gray-500', disabled && 'cursor-not-allowed opacity-50')}
+            className={cn(
+              'h-7 w-7 shrink-0 p-0 text-gray-500',
+              disabled && 'cursor-not-allowed opacity-50'
+            )}
             disabled={disabled}
           >
             {isEnabled ? <Circle className='h-4 w-4' /> : <CircleOff className='h-4 w-4' />}
@@ -92,7 +95,10 @@ export function ActionBar({ blockId, blockType, disabled = false }: ActionBarPro
                   collaborativeDuplicateBlock(blockId)
                 }
               }}
-              className={cn('text-gray-500', disabled && 'cursor-not-allowed opacity-50')}
+              className={cn(
+                'h-7 w-7 shrink-0 p-0 text-gray-500',
+                disabled && 'cursor-not-allowed opacity-50'
+              )}
               disabled={disabled}
             >
               <Copy className='h-4 w-4' />
@@ -112,7 +118,10 @@ export function ActionBar({ blockId, blockType, disabled = false }: ActionBarPro
                 collaborativeToggleBlockHandles(blockId)
               }
             }}
-            className={cn('text-gray-500', disabled && 'cursor-not-allowed opacity-50')}
+            className={cn(
+              'h-7 w-7 shrink-0 p-0 text-gray-500',
+              disabled && 'cursor-not-allowed opacity-50'
+            )}
             disabled={disabled}
           >
             {horizontalHandles ? (
@@ -139,7 +148,7 @@ export function ActionBar({ blockId, blockType, disabled = false }: ActionBarPro
                 }
               }}
               className={cn(
-                'text-gray-500 hover:text-red-600',
+                'h-7 w-7 shrink-0 p-0 text-gray-500 hover:text-red-600',
                 disabled && 'cursor-not-allowed opacity-50'
               )}
               disabled={disabled}
