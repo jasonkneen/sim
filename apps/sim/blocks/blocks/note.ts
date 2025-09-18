@@ -1,14 +1,17 @@
 import { DocumentIcon } from '@/components/icons'
 import type { BlockConfig } from '@/blocks/types'
+import type { ToolResponse } from '@/tools/types'
 
-type NoteBlockOutput = {
-  content: string
-  noteColor: string
-  formData?: Record<string, any>
-  showDataViz?: boolean
+interface NoteToolResponse extends ToolResponse {
+  output: {
+    content: string
+    noteColor: string
+    formData?: Record<string, any>
+    showDataViz?: boolean
+  }
 }
 
-export const NoteBlock: BlockConfig<NoteBlockOutput> = {
+export const NoteBlock: BlockConfig<NoteToolResponse> = {
   type: 'note',
   name: 'Note',
   description: 'Capture rich text notes within your workflow.',
@@ -65,6 +68,10 @@ export const NoteBlock: BlockConfig<NoteBlockOutput> = {
     showDataViz: { type: 'boolean', description: 'Toggle data visualisation' },
   },
   outputs: {
+    success: { type: 'boolean', description: 'Whether the note operation was successful' },
+    output: { type: 'json', description: 'The structured output containing note data' },
+    error: { type: 'string', description: 'Error message if operation failed' },
+    timing: { type: 'json', description: 'Execution timing information' },
     content: { type: 'string', description: 'Note content' },
     noteColor: { type: 'string', description: 'Note accent colour' },
     formData: { type: 'json', description: 'Incoming form data' },

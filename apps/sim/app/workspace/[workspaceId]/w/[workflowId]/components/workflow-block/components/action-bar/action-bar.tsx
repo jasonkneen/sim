@@ -11,6 +11,7 @@ import {
   Play,
   RectangleHorizontal,
   RectangleVertical,
+  Settings2,
   Trash2,
   Webhook,
 } from 'lucide-react'
@@ -18,6 +19,7 @@ import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { useUserPermissionsContext } from '@/app/workspace/[workspaceId]/components/providers/workspace-permissions-provider'
+import { useSmartNodeSettingsStore } from '@/app/workspace/[workspaceId]/w/[workflowId]/components/workflow-block/components/custom-content/use-smart-node-settings'
 import { useWorkflowExecution } from '@/app/workspace/[workspaceId]/w/[workflowId]/hooks/use-workflow-execution'
 import type { BlockConfig } from '@/blocks/types'
 import { useCollaborativeWorkflow } from '@/hooks/use-collaborative-workflow'
@@ -79,6 +81,7 @@ export function ActionBar({
 
   const isStarterBlock = blockType === 'starter'
   const isTriggerBlock = config.category === 'triggers'
+  const { open } = useSmartNodeSettingsStore()
 
   const getTooltipMessage = (defaultMessage: string) => {
     if (disabled) {
@@ -90,7 +93,7 @@ export function ActionBar({
   return (
     <div
       className={cn(
-        '-translate-x-1/2 -translate-y-[calc(100%+8px)] absolute top-0 left-1/2',
+        '-translate-x-1/2 -translate-y-[calc(100%+32px)] absolute top-0 left-1/2',
         'z-30 flex items-center gap-1.5 rounded-full px-2.5 py-1',
         'rounded-full border border-gray-200 bg-background shadow-sm dark:border-gray-800',
         'opacity-0 transition-opacity duration-200 group-hover:opacity-100'
@@ -139,6 +142,28 @@ export function ActionBar({
             </Button>
           </TooltipTrigger>
           <TooltipContent side='right'>{getTooltipMessage('Run Block')}</TooltipContent>
+        </Tooltip>
+      )}
+
+      {blockType === 'smart' && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant='ghost'
+              size='sm'
+              onClick={(event) => {
+                event.stopPropagation()
+                if (!disabled) {
+                  open(blockId)
+                }
+              }}
+              className={cn('h-7 w-7 shrink-0 p-0 text-gray-500', disabled && 'opacity-50')}
+              disabled={disabled}
+            >
+              <Settings2 className='h-4 w-4' />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side='right'>{getTooltipMessage('Smart node settings')}</TooltipContent>
         </Tooltip>
       )}
 

@@ -1346,6 +1346,15 @@ const WorkflowContent = React.memo(() => {
       })
       document.body.style.cursor = ''
 
+      // Preserve selection after drag - ensure the dragged node stays selected
+      const currentNodes = getNodes()
+      const updatedNodes = currentNodes.map((n) => ({
+        ...n,
+        selected: n.id === node.id ? true : n.selected,
+        position: n.id === node.id ? node.position : n.position,
+      }))
+      setNodes(updatedNodes)
+
       // Emit collaborative position update for the final position
       // This ensures other users see the smooth final position
       collaborativeUpdateBlockPosition(node.id, node.position)
@@ -1395,6 +1404,7 @@ const WorkflowContent = React.memo(() => {
     },
     [
       getNodes,
+      setNodes,
       dragStartParentId,
       potentialParentId,
       updateNodeParent,

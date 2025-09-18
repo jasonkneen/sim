@@ -1,16 +1,19 @@
 import { ImageIcon } from '@/components/icons'
 import type { BlockConfig } from '@/blocks/types'
+import type { ToolResponse } from '@/tools/types'
 
-type MediaViewerOutput = {
-  sourceType: 'image' | 'video' | 'audio' | 'pdf' | 'url'
-  source: string
-  caption?: string
-  autoPlay?: boolean
-  loop?: boolean
-  showMetadata?: boolean
+interface MediaViewerToolResponse extends ToolResponse {
+  output: {
+    sourceType: 'image' | 'video' | 'audio' | 'pdf' | 'url'
+    source: string
+    caption?: string
+    autoPlay?: boolean
+    loop?: boolean
+    showMetadata?: boolean
+  }
 }
 
-export const MediaViewerBlock: BlockConfig<MediaViewerOutput> = {
+export const MediaViewerBlock: BlockConfig<MediaViewerToolResponse> = {
   type: 'media_viewer',
   name: 'Media Viewer',
   description: 'Preview images, video, audio, PDFs, or URLs in your workflow canvas.',
@@ -80,6 +83,10 @@ export const MediaViewerBlock: BlockConfig<MediaViewerOutput> = {
     showMetadata: { type: 'boolean', description: 'Display metadata flag' },
   },
   outputs: {
+    success: { type: 'boolean', description: 'Whether the media viewer operation was successful' },
+    output: { type: 'json', description: 'The structured output containing media viewer data' },
+    error: { type: 'string', description: 'Error message if operation failed' },
+    timing: { type: 'json', description: 'Execution timing information' },
     sourceType: { type: 'string', description: 'Media type' },
     source: { type: 'string', description: 'Resolved media source' },
     caption: { type: 'string', description: 'Caption text' },

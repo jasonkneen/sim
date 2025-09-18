@@ -80,6 +80,10 @@ export const MCPBlock: BlockConfig<MCPToolResponse> = {
     mcpExecutions: { type: 'json', description: 'Previous execution log' },
   },
   outputs: {
+    success: { type: 'boolean', description: 'Whether the MCP operation was successful' },
+    output: { type: 'json', description: 'The structured output containing MCP data' },
+    error: { type: 'string', description: 'Error message if operation failed' },
+    timing: { type: 'json', description: 'Execution timing information' },
     server: { type: 'string', description: 'Server identifier' },
     tool: { type: 'string', description: 'Tool executed' },
     toolInput: { type: 'string', description: 'Tool input payload' },

@@ -1,5 +1,6 @@
 import { NotificationsIcon } from '@/components/icons'
 import type { BlockConfig } from '@/blocks/types'
+import type { ToolResponse } from '@/tools/types'
 
 type RecordingReference = {
   id: string
@@ -9,15 +10,17 @@ type RecordingReference = {
   notes?: string
 }
 
-type AudioRecorderOutput = {
-  mode: 'microphone' | 'system' | 'app'
-  deviceId?: string
-  autoTranscribe?: boolean
-  smartAnalysis?: boolean
-  recordings: RecordingReference[]
+interface AudioRecorderToolResponse extends ToolResponse {
+  output: {
+    mode: 'microphone' | 'system' | 'app'
+    deviceId?: string
+    autoTranscribe?: boolean
+    smartAnalysis?: boolean
+    recordings: RecordingReference[]
+  }
 }
 
-export const AudioRecorderBlock: BlockConfig<AudioRecorderOutput> = {
+export const AudioRecorderBlock: BlockConfig<AudioRecorderToolResponse> = {
   type: 'audio_recorder',
   name: 'Audio Recorder',
   description: 'Capture audio recordings and optionally transcribe them.',
@@ -80,6 +83,10 @@ export const AudioRecorderBlock: BlockConfig<AudioRecorderOutput> = {
     recordings: { type: 'json', description: 'Existing recording metadata' },
   },
   outputs: {
+    success: { type: 'boolean', description: 'Whether the audio recording operation was successful' },
+    output: { type: 'json', description: 'The structured output containing recording data' },
+    error: { type: 'string', description: 'Error message if operation failed' },
+    timing: { type: 'json', description: 'Execution timing information' },
     mode: { type: 'string', description: 'Recording mode' },
     deviceId: { type: 'string', description: 'Device identifier used' },
     autoTranscribe: { type: 'boolean', description: 'Auto transcription enabled' },

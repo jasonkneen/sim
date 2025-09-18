@@ -1,17 +1,20 @@
 import { SignalIcon } from '@/components/icons'
 import type { BlockConfig } from '@/blocks/types'
+import type { ToolResponse } from '@/tools/types'
 
-type LivestreamOutput = {
-  platform: 'youtube' | 'twitch' | 'custom'
-  streamKey?: string
-  streamUrl?: string
-  title?: string
-  description?: string
-  recordStream?: boolean
-  chatIntegration?: boolean
+interface LivestreamToolResponse extends ToolResponse {
+  output: {
+    platform: 'youtube' | 'twitch' | 'custom'
+    streamKey?: string
+    streamUrl?: string
+    title?: string
+    description?: string
+    recordStream?: boolean
+    chatIntegration?: boolean
+  }
 }
 
-export const LivestreamBlock: BlockConfig<LivestreamOutput> = {
+export const LivestreamBlock: BlockConfig<LivestreamToolResponse> = {
   type: 'livestream',
   name: 'Livestream',
   description: 'Configure livestream settings and metadata.',
@@ -87,6 +90,10 @@ export const LivestreamBlock: BlockConfig<LivestreamOutput> = {
     chatIntegration: { type: 'boolean', description: 'Enable chat integration' },
   },
   outputs: {
+    success: { type: 'boolean', description: 'Whether the livestream operation was successful' },
+    output: { type: 'json', description: 'The structured output containing livestream data' },
+    error: { type: 'string', description: 'Error message if operation failed' },
+    timing: { type: 'json', description: 'Execution timing information' },
     platform: { type: 'string', description: 'Streaming platform' },
     streamUrl: { type: 'string', description: 'RTMP URL' },
     streamKey: { type: 'string', description: 'Stream key' },

@@ -1,5 +1,6 @@
 import { PackageSearchIcon } from '@/components/icons'
 import type { BlockConfig } from '@/blocks/types'
+import type { ToolResponse } from '@/tools/types'
 
 type FolderEntry = {
   id: string
@@ -10,14 +11,16 @@ type FolderEntry = {
   path: string
 }
 
-type FolderBlockOutput = {
-  rootPath: string
-  selectedItems: FolderEntry[]
-  includeSubdirectories?: boolean
-  filters?: string[]
+interface FolderToolResponse extends ToolResponse {
+  output: {
+    rootPath: string
+    selectedItems: FolderEntry[]
+    includeSubdirectories?: boolean
+    filters?: string[]
+  }
 }
 
-export const FolderBlock: BlockConfig<FolderBlockOutput> = {
+export const FolderBlock: BlockConfig<FolderToolResponse> = {
   type: 'folder',
   name: 'Folder',
   description: 'Browse and select files or folders.',
@@ -65,6 +68,10 @@ export const FolderBlock: BlockConfig<FolderBlockOutput> = {
     selectedItems: { type: 'json', description: 'Selected files or folders' },
   },
   outputs: {
+    success: { type: 'boolean', description: 'Whether the folder operation was successful' },
+    output: { type: 'json', description: 'The structured output containing folder data' },
+    error: { type: 'string', description: 'Error message if operation failed' },
+    timing: { type: 'json', description: 'Execution timing information' },
     rootPath: { type: 'string', description: 'Base directory path' },
     includeSubdirectories: { type: 'boolean', description: 'Recurse into subdirectories' },
     filters: { type: 'json', description: 'Filename filters' },

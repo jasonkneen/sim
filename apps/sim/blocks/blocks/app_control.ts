@@ -1,16 +1,19 @@
 import { SettingsIcon } from '@/components/icons'
 import type { BlockConfig } from '@/blocks/types'
+import type { ToolResponse } from '@/tools/types'
 
-type AppControlOutput = {
-  bundleId?: string
-  appPath?: string
-  launchArgs?: string
-  shouldActivate?: boolean
-  sendCommand?: string
-  recordAudio?: boolean
+interface AppControlToolResponse extends ToolResponse {
+  output: {
+    bundleId?: string
+    appPath?: string
+    launchArgs?: string
+    shouldActivate?: boolean
+    sendCommand?: string
+    recordAudio?: boolean
+  }
 }
 
-export const AppControlBlock: BlockConfig<AppControlOutput> = {
+export const AppControlBlock: BlockConfig<AppControlToolResponse> = {
   type: 'app_control',
   name: 'App Control',
   description: 'Launch and control local applications.',
@@ -72,6 +75,13 @@ export const AppControlBlock: BlockConfig<AppControlOutput> = {
     recordAudio: { type: 'boolean', description: 'Capture app audio' },
   },
   outputs: {
+    success: { type: 'boolean', description: 'Whether the app control was successful' },
+    output: {
+      type: 'json',
+      description: 'App control configuration',
+    },
+    error: { type: 'string', description: 'Error message if operation failed' },
+    timing: { type: 'json', description: 'Execution timing information' },
     bundleId: { type: 'string', description: 'Application bundle identifier' },
     appPath: { type: 'string', description: 'Application path' },
     launchArgs: { type: 'string', description: 'Launch arguments' },

@@ -1,14 +1,17 @@
 import { ComponentIcon } from '@/components/icons'
 import type { BlockConfig } from '@/blocks/types'
+import type { ToolResponse } from '@/tools/types'
 
-type GroupBlockOutput = {
-  label: string
-  color?: string
-  collapsed?: boolean
-  description?: string
+interface GroupToolResponse extends ToolResponse {
+  output: {
+    label: string
+    color?: string
+    collapsed?: boolean
+    description?: string
+  }
 }
 
-export const GroupBlock: BlockConfig<GroupBlockOutput> = {
+export const GroupBlock: BlockConfig<GroupToolResponse> = {
   type: 'group',
   name: 'Group',
   description: 'Visually group related blocks.',
@@ -61,6 +64,10 @@ export const GroupBlock: BlockConfig<GroupBlockOutput> = {
     collapsed: { type: 'boolean', description: 'Collapsed state' },
   },
   outputs: {
+    success: { type: 'boolean', description: 'Whether the group operation was successful' },
+    output: { type: 'json', description: 'The structured output containing group data' },
+    error: { type: 'string', description: 'Error message if operation failed' },
+    timing: { type: 'json', description: 'Execution timing information' },
     label: { type: 'string', description: 'Group label' },
     description: { type: 'string', description: 'Group description' },
     color: { type: 'string', description: 'Accent colour' },

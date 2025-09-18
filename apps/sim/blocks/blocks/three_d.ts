@@ -1,5 +1,6 @@
 import { AtomIcon } from '@/components/icons'
 import type { BlockConfig } from '@/blocks/types'
+import type { ToolResponse } from '@/tools/types'
 
 type ThreeDAsset = {
   url: string
@@ -14,13 +15,15 @@ type ThreeDSceneConfig = {
   lightingPreset?: 'studio' | 'sunset' | 'night'
 }
 
-type ThreeDBlockOutput = {
-  asset: ThreeDAsset
-  scene: ThreeDSceneConfig
-  cameraPosition?: { x: number; y: number; z: number }
+interface ThreeDToolResponse extends ToolResponse {
+  output: {
+    asset: ThreeDAsset
+    scene: ThreeDSceneConfig
+    cameraPosition?: { x: number; y: number; z: number }
+  }
 }
 
-export const ThreeDBlock: BlockConfig<ThreeDBlockOutput> = {
+export const ThreeDBlock: BlockConfig<ThreeDToolResponse> = {
   type: 'three_d',
   name: '3D Viewer',
   description: 'Render and manipulate 3D assets.',
@@ -103,6 +106,10 @@ export const ThreeDBlock: BlockConfig<ThreeDBlockOutput> = {
     cameraPosition: { type: 'string', description: 'Initial camera coordinates' },
   },
   outputs: {
+    success: { type: 'boolean', description: 'Whether the 3D operation was successful' },
+    output: { type: 'json', description: 'The structured output containing 3D data' },
+    error: { type: 'string', description: 'Error message if operation failed' },
+    timing: { type: 'json', description: 'Execution timing information' },
     asset: { type: 'json', description: '3D asset details' },
     scene: { type: 'json', description: 'Scene configuration' },
     cameraPosition: { type: 'json', description: 'Camera position vector' },

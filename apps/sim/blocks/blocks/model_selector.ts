@@ -1,16 +1,19 @@
 import { BrainIcon } from '@/components/icons'
 import { providers } from '@/providers/utils'
 import type { BlockConfig } from '@/blocks/types'
+import type { ToolResponse } from '@/tools/types'
 
-type ModelSelectorOutput = {
-  provider: string
-  model: string
-  temperature?: number
-  maxTokens?: number
-  costEstimate?: number
+interface ModelSelectorToolResponse extends ToolResponse {
+  output: {
+    provider: string
+    model: string
+    temperature?: number
+    maxTokens?: number
+    costEstimate?: number
+  }
 }
 
-export const ModelSelectorBlock: BlockConfig<ModelSelectorOutput> = {
+export const ModelSelectorBlock: BlockConfig<ModelSelectorToolResponse> = {
   type: 'model_selector',
   name: 'Model Selector',
   description: 'Pick AI models and tune generation parameters.',
@@ -70,6 +73,10 @@ export const ModelSelectorBlock: BlockConfig<ModelSelectorOutput> = {
     costEstimate: { type: 'number', description: 'Estimated cost per run' },
   },
   outputs: {
+    success: { type: 'boolean', description: 'Whether the model selector operation was successful' },
+    output: { type: 'json', description: 'The structured output containing model selector data' },
+    error: { type: 'string', description: 'Error message if operation failed' },
+    timing: { type: 'json', description: 'Execution timing information' },
     provider: { type: 'string', description: 'Selected provider' },
     model: { type: 'string', description: 'Selected model name' },
     temperature: { type: 'number', description: 'Temperature value' },

@@ -1,5 +1,6 @@
 import { SignalIcon } from '@/components/icons'
 import type { BlockConfig } from '@/blocks/types'
+import type { ToolResponse } from '@/tools/types'
 
 type AudioTrack = {
   id: string
@@ -10,16 +11,18 @@ type AudioTrack = {
   durationSeconds?: number
 }
 
-type AudioPlayerOutput = {
-  playlist: AudioTrack[]
-  currentTrackIndex?: number
-  loop?: boolean
-  shuffle?: boolean
-  radioMode?: boolean
-  autoPlay?: boolean
+interface AudioPlayerToolResponse extends ToolResponse {
+  output: {
+    playlist: AudioTrack[]
+    currentTrackIndex?: number
+    loop?: boolean
+    shuffle?: boolean
+    radioMode?: boolean
+    autoPlay?: boolean
+  }
 }
 
-export const AudioPlayerBlock: BlockConfig<AudioPlayerOutput> = {
+export const AudioPlayerBlock: BlockConfig<AudioPlayerToolResponse> = {
   type: 'audio_player',
   name: 'Audio Player',
   description: 'Manage audio playlists with playback controls.',
@@ -81,6 +84,10 @@ export const AudioPlayerBlock: BlockConfig<AudioPlayerOutput> = {
     autoPlay: { type: 'boolean', description: 'Autoplay flag' },
   },
   outputs: {
+    success: { type: 'boolean', description: 'Whether the audio player was successful' },
+    output: { type: 'json', description: 'Audio player configuration' },
+    error: { type: 'string', description: 'Error message if operation failed' },
+    timing: { type: 'json', description: 'Execution timing information' },
     playlist: { type: 'json', description: 'Resolved playlist' },
     currentTrackIndex: { type: 'number', description: 'Current track index' },
     loop: { type: 'boolean', description: 'Loop state' },

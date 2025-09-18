@@ -1,15 +1,18 @@
 import { MessagesIcon } from '@/components/icons'
 import type { BlockConfig } from '@/blocks/types'
-import type { ElevenLabsBlockResponse } from '@/tools/elevenlabs/types'
+import type { ToolResponse } from '@/tools/types'
 
 type TTSProvider = 'elevenlabs'
 
-type TTSBlockOutput = ElevenLabsBlockResponse['output'] & {
-  provider: TTSProvider
-  audioFormat: 'mp3' | 'wav' | 'ogg' | 'aac'
+interface TTSToolResponse extends ToolResponse {
+  output: {
+    audioUrl: string
+    provider: TTSProvider
+    audioFormat: 'mp3' | 'wav' | 'ogg' | 'aac'
+  }
 }
 
-export const TTSBlock: BlockConfig<TTSBlockOutput> = {
+export const TTSBlock: BlockConfig<TTSToolResponse> = {
   type: 'tts',
   name: 'Text to Speech',
   description: 'Convert text to speech using configurable providers.',
@@ -97,6 +100,10 @@ export const TTSBlock: BlockConfig<TTSBlockOutput> = {
     apiKey: { type: 'string', description: 'Provider API key' },
   },
   outputs: {
+    success: { type: 'boolean', description: 'Whether the TTS operation was successful' },
+    output: { type: 'json', description: 'The structured output containing TTS data' },
+    error: { type: 'string', description: 'Error message if operation failed' },
+    timing: { type: 'json', description: 'Execution timing information' },
     provider: { type: 'string', description: 'Provider used for synthesis' },
     audioUrl: { type: 'string', description: 'Generated audio URL' },
     audioFormat: { type: 'string', description: 'Audio format' },

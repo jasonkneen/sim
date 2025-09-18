@@ -453,7 +453,7 @@ export function WorkflowBlock({ id, data, selected }: NodeProps<WorkflowBlockPro
         <div
           className={cn(
             'absolute left-0 z-30 flex items-center gap-2 px-2 font-semibold text-muted-foreground text-xs uppercase tracking-[0.08em]',
-            '-top-6'
+            '-top-5'
           )}
         >
           {isEditing ? (
@@ -495,7 +495,9 @@ export function WorkflowBlock({ id, data, selected }: NodeProps<WorkflowBlockPro
           selected && 'ring-2 ring-primary ring-offset-2',
           'z-[20]',
           // Make the entire card draggable when not in full title mode
-          nodeTitleDisplayMode !== 'full' && userPermissions.canEdit && 'workflow-drag-handle cursor-grab [&:active]:cursor-grabbing'
+          nodeTitleDisplayMode !== 'full' &&
+            userPermissions.canEdit &&
+            'workflow-drag-handle cursor-grab [&:active]:cursor-grabbing'
         )}
       >
         {/* Show debug indicator for pending blocks */}
@@ -510,7 +512,9 @@ export function WorkflowBlock({ id, data, selected }: NodeProps<WorkflowBlockPro
           blockType={type}
           config={config}
           blockAdvancedMode={blockAdvancedMode}
-          showTitleOptionsInToolbar={nodeTitleDisplayMode === 'default' || nodeTitleDisplayMode === 'hidden'}
+          showTitleOptionsInToolbar={
+            nodeTitleDisplayMode === 'default' || nodeTitleDisplayMode === 'hidden'
+          }
           shouldShowScheduleBadge={shouldShowScheduleBadge}
           scheduleInfo={scheduleInfo ?? undefined}
           onDisableSchedule={disableSchedule}
@@ -831,10 +835,7 @@ export function WorkflowBlock({ id, data, selected }: NodeProps<WorkflowBlockPro
         )}
 
         {/* Block Content */}
-        <div
-          ref={contentRef}
-          className='cursor-pointer space-y-4 px-4 pt-3 pb-4'
-        >
+        <div ref={contentRef} className='cursor-pointer space-y-4 px-4 pt-3 pb-4'>
           {subBlockRows.length > 0
             ? subBlockRows.map((row, rowIndex) => (
                 <div key={`row-${rowIndex}`} className='flex gap-4'>

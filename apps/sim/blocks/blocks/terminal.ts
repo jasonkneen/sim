@@ -1,5 +1,6 @@
 import { CodeIcon } from '@/components/icons'
 import type { BlockConfig } from '@/blocks/types'
+import type { ToolResponse } from '@/tools/types'
 
 type TerminalHistoryEntry = {
   command: string
@@ -9,15 +10,17 @@ type TerminalHistoryEntry = {
   executedAt?: string
 }
 
-type TerminalBlockOutput = {
-  command: string
-  workingDirectory?: string
-  environment?: Record<string, string>
-  keepSession?: boolean
-  history: TerminalHistoryEntry[]
+interface TerminalToolResponse extends ToolResponse {
+  output: {
+    command: string
+    workingDirectory?: string
+    environment?: Record<string, string>
+    keepSession?: boolean
+    history: TerminalHistoryEntry[]
+  }
 }
 
-export const TerminalBlock: BlockConfig<TerminalBlockOutput> = {
+export const TerminalBlock: BlockConfig<TerminalToolResponse> = {
   type: 'terminal',
   name: 'Terminal',
   description: 'Execute shell commands as part of your workflow.',
@@ -74,6 +77,10 @@ export const TerminalBlock: BlockConfig<TerminalBlockOutput> = {
     history: { type: 'json', description: 'Previous command history' },
   },
   outputs: {
+    success: { type: 'boolean', description: 'Whether the terminal operation was successful' },
+    output: { type: 'json', description: 'The structured output containing terminal data' },
+    error: { type: 'string', description: 'Error message if operation failed' },
+    timing: { type: 'json', description: 'Execution timing information' },
     command: { type: 'string', description: 'Shell command' },
     workingDirectory: { type: 'string', description: 'Working directory' },
     environment: { type: 'json', description: 'Environment variables' },
