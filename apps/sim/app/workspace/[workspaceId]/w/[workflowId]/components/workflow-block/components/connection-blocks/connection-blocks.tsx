@@ -1,6 +1,4 @@
 import { RepeatIcon, SplitIcon } from 'lucide-react'
-import { Card } from '@/components/ui/card'
-import { cn } from '@/lib/utils'
 import {
   type ConnectedBlock,
   useBlockConnections,
@@ -94,31 +92,28 @@ export function ConnectionBlocks({
     }
 
     return (
-      <Card
+      <div
         key={`${connection.id}-${connection.name}`}
         draggable={!isDisabled}
         onDragStart={(e) => handleDragStart(e, connection)}
         onDragEnd={handleDragEnd}
-        className={cn(
-          'group flex w-max items-center gap-2 rounded-lg border bg-card p-2 shadow-sm transition-colors',
+        className={
           !isDisabled
-            ? 'cursor-grab hover:bg-accent/50 active:cursor-grabbing'
-            : 'cursor-not-allowed opacity-60'
-        )}
+            ? 'group inline-flex w-max items-center gap-1 rounded-full border border-border/70 bg-card/70 px-2 py-1 text-xs font-medium text-muted-foreground transition-colors cursor-grab hover:bg-accent/70 active:cursor-grabbing'
+            : 'group inline-flex w-max items-center gap-1 rounded-full border border-border/70 bg-card/70 px-2 py-1 text-xs font-medium text-muted-foreground/60 cursor-not-allowed opacity-60'
+        }
       >
         {/* Block icon with color */}
         {Icon && (
           <div
-            className='flex h-5 w-5 flex-shrink-0 items-center justify-center rounded'
+            className='flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full'
             style={{ backgroundColor: bgColor }}
           >
             <Icon className='h-3 w-3 text-white' />
           </div>
         )}
-        <div className='text-sm'>
-          <span className='font-medium leading-none'>{displayName}</span>
-        </div>
-      </Card>
+        <span className='leading-none text-foreground/80'>{displayName}</span>
+      </div>
     )
   }
 
@@ -131,14 +126,14 @@ export function ConnectionBlocks({
 
   if (horizontalHandles) {
     return (
-      <div className='px-4 pb-4'>
-        <div className='flex w-full flex-wrap items-center gap-2 pt-2'>{connectionCards}</div>
+      <div className='px-4 pb-3'>
+        <div className='flex w-full flex-wrap items-center gap-1.5 pt-2'>{connectionCards}</div>
       </div>
     )
   }
 
   return (
-    <div className='absolute top-0 right-full flex max-h-[400px] max-w-[200px] flex-col items-end gap-2 overflow-y-auto pr-3'>
+    <div className='absolute top-0 right-full flex max-h-[400px] max-w-[200px] flex-col items-end gap-1.5 overflow-y-auto pr-3'>
       {connectionCards}
     </div>
   )
