@@ -453,13 +453,14 @@ export function useWorkflowExecution() {
   const executeWorkflow = async (
     workflowInput?: any,
     onStream?: (se: StreamingExecution) => Promise<void>,
-    executionId?: string
+    executionId?: string,
+    targetBlockId?: string
   ): Promise<ExecutionResult | StreamingExecution> => {
     // Use the mergeSubblockState utility to get all block states
     const mergedStates = mergeSubblockState(blocks)
 
     // Filter out trigger blocks for manual execution
-    const filteredStates = Object.entries(mergedStates).reduce(
+    let filteredStates = Object.entries(mergedStates).reduce(
       (acc, [id, block]) => {
         const blockConfig = getBlock(block.type)
         const isTriggerBlock = blockConfig?.category === 'triggers'
@@ -472,6 +473,42 @@ export function useWorkflowExecution() {
       },
       {} as typeof mergedStates
     )
+
+    let allowedBlockIds: Set<string> | undefined
+    if (targetBlockId) {
+      if (!filteredStates[targetBlockId]) {
+        throw new Error('Selected block cannot be executed or was not found in the workflow')
+      }
+
+      allowedBlockIds = new Set<string>([targetBlockId])
+      const stack: string[] = [targetBlockId]
+
+      while (stack.length > 0) {
+        const current = stack.pop() as string
+
+        edges.forEach((edge) => {
+          if (
+            edge.target === current &&
+            filteredStates[edge.source] &&
+            !allowedBlockIds!.has(edge.source)
+          ) {
+            allowedBlockIds!.add(edge.source)
+            stack.push(edge.source)
+          }
+        })
+      }
+
+      const starterEntry = Object.entries(filteredStates).find(
+        ([, block]) => block.type === 'starter'
+      )
+      if (starterEntry) {
+        allowedBlockIds.add(starterEntry[0])
+      }
+
+      filteredStates = Object.fromEntries(
+        Object.entries(filteredStates).filter(([id]) => allowedBlockIds!.has(id))
+      )
+    }
 
     const currentBlockStates = Object.entries(filteredStates).reduce(
       (acc, [id, block]) => {
@@ -513,9 +550,15 @@ export function useWorkflowExecution() {
       return blockConfig?.category === 'triggers'
     })
 
-    const filteredEdges = edges.filter(
+    let filteredEdges = edges.filter(
       (edge) => !triggerBlockIds.includes(edge.source) && !triggerBlockIds.includes(edge.target)
     )
+
+    if (allowedBlockIds) {
+      filteredEdges = filteredEdges.filter(
+        (edge) => allowedBlockIds!.has(edge.source) && allowedBlockIds!.has(edge.target)
+      )
+    }
 
     // Create serialized workflow with filtered blocks and edges
     const workflow = new Serializer().serializeWorkflow(
@@ -532,7 +575,9 @@ export function useWorkflowExecution() {
 
     // If this is a chat execution, get the selected outputs
     let selectedOutputIds: string[] | undefined
-    if (isChatExecution && activeWorkflowId) {
+    if (targetBlockId) {
+      selectedOutputIds = [targetBlockId]
+    } else if (isChatExecution && activeWorkflowId) {
       // Get selected outputs from chat store
       const chatStore = await import('@/stores/panel/chat/store').then((mod) => mod.useChatStore)
       selectedOutputIds = chatStore.getState().getSelectedWorkflowOutput(activeWorkflowId)
@@ -672,6 +717,50 @@ export function useWorkflowExecution() {
 
     return errorResult
   }
+
+  const handleRunBlock = useCallback(
+    async (blockId: string) => {
+      if (!activeWorkflowId) return
+
+      setExecutionResult(null)
+      setIsExecuting(true)
+
+      const executionId = uuidv4()
+
+      try {
+        const result = await executeWorkflow(undefined, undefined, executionId, blockId)
+
+        if (result && 'success' in result) {
+          setExecutionResult(result)
+
+          persistLogs(executionId, result).catch((err) => {
+            logger.error('Error persisting logs:', { error: err })
+          })
+        }
+
+        return result
+      } catch (error: any) {
+        const errorResult = handleExecutionError(error)
+        persistLogs(executionId, errorResult).catch((err) => {
+          logger.error('Error persisting logs:', { error: err })
+        })
+        return errorResult
+      } finally {
+        setIsExecuting(false)
+        setIsDebugging(false)
+        setActiveBlocks(new Set())
+      }
+    },
+    [
+      activeWorkflowId,
+      executeWorkflow,
+      handleExecutionError,
+      setExecutionResult,
+      setIsExecuting,
+      setIsDebugging,
+      setActiveBlocks,
+    ]
+  )
 
   /**
    * Handles stepping through workflow execution in debug mode
@@ -850,6 +939,7 @@ export function useWorkflowExecution() {
     isDebugging,
     pendingBlocks,
     executionResult,
+    handleRunBlock,
     handleRunWorkflow,
     handleStepDebug,
     handleResumeDebug,

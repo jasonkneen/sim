@@ -27,6 +27,11 @@ export function formatDisplayText(text: string, stripQuotes = false): ReactNode[
   const parts = processedText.split(/(<[^>]+>|\{\{[^}]+\}\})/g)
 
   return parts.map((part, index) => {
+    // Guard against undefined or null parts
+    if (!part) {
+      return null
+    }
+
     // Handle block references
     if (part.startsWith('<') && part.endsWith('>')) {
       return (
@@ -46,5 +51,5 @@ export function formatDisplayText(text: string, stripQuotes = false): ReactNode[
     }
 
     return <span key={index}>{part}</span>
-  })
+  }).filter(Boolean)
 }

@@ -20,7 +20,7 @@ export const useGeneralStore = create<GeneralStore>()(
           isAutoPanEnabled: true,
           isConsoleExpandedByDefault: true,
           isDebugModeEnabled: false,
-          nodeTitleDisplayMode: 'full',
+          nodeTitleDisplayMode: 'hidden',
           theme: 'system' as const,
           telemetryEnabled: true,
           telemetryNotifiedUser: false,
@@ -167,7 +167,7 @@ export const useGeneralStore = create<GeneralStore>()(
                 isAutoConnectEnabled: data.autoConnect,
                 isAutoPanEnabled: data.autoPan ?? true, // Default to true if undefined
                 isConsoleExpandedByDefault: data.consoleExpandedByDefault ?? true, // Default to true if undefined
-                nodeTitleDisplayMode: data.nodeTitleDisplayMode ?? 'full',
+                nodeTitleDisplayMode: data.nodeTitleDisplayMode ?? 'hidden',
                 theme: data.theme,
                 telemetryEnabled: data.telemetryEnabled,
                 telemetryNotifiedUser: data.telemetryNotifiedUser,

@@ -9,6 +9,7 @@ export enum BlockType {
   CONDITION = 'condition',
   FUNCTION = 'function',
   AGENT = 'agent',
+  SMART = 'smart',
   API = 'api',
   EVALUATOR = 'evaluator',
   RESPONSE = 'response',

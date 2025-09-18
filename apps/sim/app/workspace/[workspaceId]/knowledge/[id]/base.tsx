@@ -8,6 +8,7 @@ import {
   ChevronRight,
   Circle,
   CircleOff,
+  Edit,
   FileText,
   Loader2,
   Plus,
@@ -37,6 +38,7 @@ import {
   UploadModal,
 } from '@/app/workspace/[workspaceId]/knowledge/[id]/components'
 import {
+  EditModal,
   getDocumentIcon,
   KnowledgeHeader,
   PrimaryButton,
@@ -140,6 +142,7 @@ export function KnowledgeBase({
   const [selectedDocuments, setSelectedDocuments] = useState<Set<string>>(new Set())
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showUploadModal, setShowUploadModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isBulkOperating, setIsBulkOperating] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
@@ -693,6 +696,25 @@ export function KnowledgeBase({
                       </button>
                     )}
 
+                    {/* Edit Knowledge Base Button */}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          onClick={() => setShowEditModal(true)}
+                          disabled={userPermissions.canEdit !== true}
+                          variant='outline'
+                          size='sm'
+                          className='flex items-center gap-1'
+                        >
+                          <Edit className='h-3.5 w-3.5' />
+                          <span>Edit</span>
+                        </Button>
+                      </TooltipTrigger>
+                      {userPermissions.canEdit !== true && (
+                        <TooltipContent>Write permission required to edit knowledge base</TooltipContent>
+                      )}
+                    </Tooltip>
+
                     {/* Add Documents Button */}
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -1180,6 +1202,18 @@ export function KnowledgeBase({
         knowledgeBaseId={id}
         chunkingConfig={knowledgeBase?.chunkingConfig}
         onUploadComplete={refreshDocuments}
+      />
+
+      {/* Edit Modal */}
+      <EditModal
+        open={showEditModal}
+        onOpenChange={setShowEditModal}
+        knowledgeBase={knowledgeBase}
+        onKnowledgeBaseUpdated={(updatedKB) => {
+          // The modal will close itself after successful update
+          // The knowledge base will be updated in the store automatically
+          setShowEditModal(false)
+        }}
       />
 
       {/* Bulk Action Bar */}

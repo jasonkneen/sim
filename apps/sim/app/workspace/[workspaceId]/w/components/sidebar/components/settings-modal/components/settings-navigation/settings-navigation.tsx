@@ -7,6 +7,9 @@ import {
   Shield,
   UserCircle,
   Users,
+  Server,
+  Cpu,
+  Atom,
 } from 'lucide-react'
 import { isDev } from '@/lib/environment'
 import { cn } from '@/lib/utils'
@@ -21,6 +24,9 @@ interface SettingsNavigationProps {
       | 'account'
       | 'credentials'
       | 'apikeys'
+      | 'providers'
+      | 'models'
+      | 'mcp-servers'
       | 'subscription'
       | 'team'
       | 'privacy'
@@ -35,6 +41,9 @@ type NavigationItem = {
     | 'account'
     | 'credentials'
     | 'apikeys'
+    | 'providers'
+    | 'models'
+    | 'mcp-servers'
     | 'subscription'
     | 'team'
     | 'privacy'
@@ -69,6 +78,21 @@ const allNavigationItems: NavigationItem[] = [
     id: 'apikeys',
     label: 'API Keys',
     icon: KeySquare,
+  },
+  {
+    id: 'providers',
+    label: 'Providers',
+    icon: Server,
+  },
+  {
+    id: 'models',
+    label: 'Models',
+    icon: Cpu,
+  },
+  {
+    id: 'mcp-servers',
+    label: 'MCP Servers',
+    icon: Atom,
   },
   {
     id: 'privacy',

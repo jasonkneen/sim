@@ -48,6 +48,8 @@ export type SubBlockType =
   | 'input-format' // Input structure format
   | 'response-format' // Response structure format
   | 'file-upload' // File uploader
+  | 'rich-text' // Rich text editor
+  | 'playlist-editor' // Audio playlist editor
 
 // Component width setting
 export type SubBlockLayout = 'full' | 'half'

@@ -1551,15 +1551,26 @@ const WorkflowContent = React.memo(() => {
             strokeDasharray: '5,5',
           }}
           connectionLineType={ConnectionLineType.SmoothStep}
-          onNodeClick={(e, _node) => {
+          onNodeClick={(e, node) => {
             e.stopPropagation()
+            // Handle node selection
+            const reactFlowInstance = project
+            if (reactFlowInstance) {
+              reactFlowInstance.setNodes((nodes) =>
+                nodes.map((n) => ({
+                  ...n,
+                  selected: n.id === node.id,
+                }))
+              )
+            }
           }}
           onPaneClick={onPaneClick}
           onEdgeClick={onEdgeClick}
           elementsSelectable={true}
-          selectNodesOnDrag={false}
+          selectNodesOnDrag={!userPermissions.canEdit}
           nodesConnectable={userPermissions.canEdit}
           nodesDraggable={userPermissions.canEdit}
+          panOnDrag={!userPermissions.canEdit}
           draggable={false}
           noWheelClassName='allow-scroll'
           edgesFocusable={true}

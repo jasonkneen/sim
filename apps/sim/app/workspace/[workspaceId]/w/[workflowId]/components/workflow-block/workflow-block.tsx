@@ -6,13 +6,14 @@ import { Badge, Button, Card, Tooltip, TooltipContent, TooltipTrigger } from '@/
 import { parseCronToHumanReadable } from '@/lib/schedules/utils'
 import { cn, validateName } from '@/lib/utils'
 import { useUserPermissionsContext } from '@/app/workspace/[workspaceId]/components/providers/workspace-permissions-provider'
-import { useGeneralStore } from '@/stores/settings/general/store'
 import { ActionBar } from '@/app/workspace/[workspaceId]/w/[workflowId]/components/workflow-block/components/action-bar/action-bar'
 import { ConnectionBlocks } from '@/app/workspace/[workspaceId]/w/[workflowId]/components/workflow-block/components/connection-blocks/connection-blocks'
+import { CustomBlockContent } from '@/app/workspace/[workspaceId]/w/[workflowId]/components/workflow-block/components/custom-content'
 import { SubBlock } from '@/app/workspace/[workspaceId]/w/[workflowId]/components/workflow-block/components/sub-block/sub-block'
 import type { BlockConfig, SubBlockConfig } from '@/blocks/types'
 import { useCollaborativeWorkflow } from '@/hooks/use-collaborative-workflow'
 import { useExecutionStore } from '@/stores/execution/store'
+import { useGeneralStore } from '@/stores/settings/general/store'
 import { useWorkflowRegistry } from '@/stores/workflows/registry/store'
 import { useSubBlockStore } from '@/stores/workflows/subblock/store'
 import { mergeSubblockState } from '@/stores/workflows/utils'
@@ -64,7 +65,7 @@ export function WorkflowBlock({ id, data }: NodeProps<WorkflowBlockProps>) {
   const horizontalHandles = useWorkflowStore(
     (state) => state.blocks[id]?.horizontalHandles ?? false
   )
-  const isWide = useWorkflowStore((state) => state.blocks[id]?.isWide ?? false)
+  const isWide = useWorkflowStore((state) => state.blocks[id]?.isWide ?? true)
   const blockHeight = useWorkflowStore((state) => state.blocks[id]?.height ?? 0)
   // Get per-block webhook status by checking if webhook is configured
   const activeWorkflowId = useWorkflowRegistry((state) => state.activeWorkflowId)
@@ -449,7 +450,12 @@ export function WorkflowBlock({ id, data }: NodeProps<WorkflowBlockProps>) {
   return (
     <div className='group relative'>
       {nodeTitleDisplayMode === 'default' && (
-        <div className='absolute -top-6 left-0 z-30 flex items-center gap-2 px-2 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground'>
+        <div
+          className={cn(
+            'absolute left-0 z-30 flex items-center gap-2 px-2 font-semibold text-muted-foreground text-xs uppercase tracking-[0.08em]',
+            '-top-6'
+          )}
+        >
           {isEditing ? (
             <input
               ref={nameInputRef}
@@ -458,12 +464,12 @@ export function WorkflowBlock({ id, data }: NodeProps<WorkflowBlockProps>) {
               onChange={(e) => handleNodeNameChange(e.target.value)}
               onBlur={handleNameSubmit}
               onKeyDown={handleNameKeyDown}
-              className='pointer-events-auto border-none bg-transparent p-0 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground outline-none'
+              className='pointer-events-auto border-none bg-transparent p-0 font-semibold text-muted-foreground text-xs uppercase tracking-[0.08em] outline-none'
               maxLength={24}
             />
           ) : (
             <span
-              className='pointer-events-auto cursor-text truncate max-w-[200px]'
+              className='pointer-events-auto max-w-[200px] cursor-text truncate'
               onClick={(event) => {
                 event.stopPropagation()
                 setEditedName(name)
@@ -481,7 +487,7 @@ export function WorkflowBlock({ id, data }: NodeProps<WorkflowBlockProps>) {
         className={cn(
           'relative cursor-default select-none shadow-md',
           'transition-block-bg transition-ring',
-          'rounded-2xl border-border border-[4px]',
+          'rounded-2xl border-[4px] border-border',
           isWide ? 'w-[480px]' : 'w-[320px]',
           !isEnabled && 'shadow-sm',
           isActive && 'animate-pulse-ring ring-2 ring-blue-500',
@@ -596,92 +602,191 @@ export function WorkflowBlock({ id, data }: NodeProps<WorkflowBlockProps>) {
                 )}
               </div>
             </div>
-          <div className='flex flex-shrink-0 items-center gap-2'>
-            {!isEnabled && (
-              <Badge variant='secondary' className='bg-gray-100 text-gray-500 hover:bg-gray-100'>
-                Disabled
-              </Badge>
-            )}
-            {/* Schedule indicator badge - displayed for starter blocks with active schedules */}
-            {shouldShowScheduleBadge && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Badge
-                    variant='outline'
-                    className={cn(
-                      'flex cursor-pointer items-center gap-1 font-normal text-xs',
-                      scheduleInfo?.isDisabled
-                        ? 'border-amber-200 bg-amber-50 text-amber-600 hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-400'
-                        : 'border-green-200 bg-green-50 text-green-600 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400'
-                    )}
-                    onClick={
-                      scheduleInfo?.id
-                        ? scheduleInfo.isDisabled
-                          ? () => reactivateSchedule(scheduleInfo.id!)
-                          : () => disableSchedule(scheduleInfo.id!)
-                        : undefined
-                    }
-                  >
-                    <div className='relative mr-0.5 flex items-center justify-center'>
-                      <div
-                        className={cn(
-                          'absolute h-3 w-3 rounded-full',
-                          scheduleInfo?.isDisabled ? 'bg-amber-500/20' : 'bg-green-500/20'
-                        )}
-                      />
-                      <div
-                        className={cn(
-                          'relative h-2 w-2 rounded-full',
-                          scheduleInfo?.isDisabled ? 'bg-amber-500' : 'bg-green-500'
-                        )}
-                      />
-                    </div>
-                    {scheduleInfo?.isDisabled ? 'Disabled' : 'Scheduled'}
-                  </Badge>
-                </TooltipTrigger>
-                <TooltipContent side='top' className='max-w-[300px] p-4'>
-                  {scheduleInfo?.isDisabled ? (
-                    <p className='text-sm'>
-                      This schedule is currently disabled. Click the badge to reactivate it.
-                    </p>
-                  ) : (
-                    <p className='text-sm'>Click the badge to disable this schedule.</p>
-                  )}
-                </TooltipContent>
-              </Tooltip>
-            )}
-            {/* Webhook indicator badge - displayed for starter blocks with active webhooks */}
-            {showWebhookIndicator && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Badge
-                    variant='outline'
-                    className='flex items-center gap-1 border-green-200 bg-green-50 font-normal text-green-600 text-xs hover:bg-green-50 dark:bg-green-900/20 dark:text-green-400'
-                  >
-                    <div className='relative mr-0.5 flex items-center justify-center'>
-                      <div className='absolute h-3 w-3 rounded-full bg-green-500/20' />
-                      <div className='relative h-2 w-2 rounded-full bg-green-500' />
-                    </div>
-                    Webhook
-                  </Badge>
-                </TooltipTrigger>
-                <TooltipContent side='top' className='max-w-[300px] p-4'>
-                  {webhookInfo ? (
-                    <>
-                      <p className='text-sm'>{getProviderName(webhookInfo.provider)} Webhook</p>
-                      <p className='mt-1 text-muted-foreground text-xs'>
-                        Path: {webhookInfo.webhookPath}
+            <div className='flex flex-shrink-0 items-center gap-2'>
+              {!isEnabled && (
+                <Badge variant='secondary' className='bg-gray-100 text-gray-500 hover:bg-gray-100'>
+                  Disabled
+                </Badge>
+              )}
+              {/* Schedule indicator badge - displayed for starter blocks with active schedules */}
+              {shouldShowScheduleBadge && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge
+                      variant='outline'
+                      className={cn(
+                        'flex cursor-pointer items-center gap-1 font-normal text-xs',
+                        scheduleInfo?.isDisabled
+                          ? 'border-amber-200 bg-amber-50 text-amber-600 hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-400'
+                          : 'border-green-200 bg-green-50 text-green-600 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400'
+                      )}
+                      onClick={
+                        scheduleInfo?.id
+                          ? scheduleInfo.isDisabled
+                            ? () => reactivateSchedule(scheduleInfo.id!)
+                            : () => disableSchedule(scheduleInfo.id!)
+                          : undefined
+                      }
+                    >
+                      <div className='relative mr-0.5 flex items-center justify-center'>
+                        <div
+                          className={cn(
+                            'absolute h-3 w-3 rounded-full',
+                            scheduleInfo?.isDisabled ? 'bg-amber-500/20' : 'bg-green-500/20'
+                          )}
+                        />
+                        <div
+                          className={cn(
+                            'relative h-2 w-2 rounded-full',
+                            scheduleInfo?.isDisabled ? 'bg-amber-500' : 'bg-green-500'
+                          )}
+                        />
+                      </div>
+                      {scheduleInfo?.isDisabled ? 'Disabled' : 'Scheduled'}
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent side='top' className='max-w-[300px] p-4'>
+                    {scheduleInfo?.isDisabled ? (
+                      <p className='text-sm'>
+                        This schedule is currently disabled. Click the badge to reactivate it.
                       </p>
-                    </>
-                  ) : (
-                    <p className='text-muted-foreground text-sm'>
-                      This workflow is triggered by a webhook.
-                    </p>
-                  )}
-                </TooltipContent>
-              </Tooltip>
-            )}
-            {config.subBlocks.some((block) => block.mode) && (
+                    ) : (
+                      <p className='text-sm'>Click the badge to disable this schedule.</p>
+                    )}
+                  </TooltipContent>
+                </Tooltip>
+              )}
+              {/* Webhook indicator badge - displayed for starter blocks with active webhooks */}
+              {showWebhookIndicator && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge
+                      variant='outline'
+                      className='flex items-center gap-1 border-green-200 bg-green-50 font-normal text-green-600 text-xs hover:bg-green-50 dark:bg-green-900/20 dark:text-green-400'
+                    >
+                      <div className='relative mr-0.5 flex items-center justify-center'>
+                        <div className='absolute h-3 w-3 rounded-full bg-green-500/20' />
+                        <div className='relative h-2 w-2 rounded-full bg-green-500' />
+                      </div>
+                      Webhook
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent side='top' className='max-w-[300px] p-4'>
+                    {webhookInfo ? (
+                      <>
+                        <p className='text-sm'>{getProviderName(webhookInfo.provider)} Webhook</p>
+                        <p className='mt-1 text-muted-foreground text-xs'>
+                          Path: {webhookInfo.webhookPath}
+                        </p>
+                      </>
+                    ) : (
+                      <p className='text-muted-foreground text-sm'>
+                        This workflow is triggered by a webhook.
+                      </p>
+                    )}
+                  </TooltipContent>
+                </Tooltip>
+              )}
+              {config.subBlocks.some((block) => block.mode) && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant='ghost'
+                      size='sm'
+                      onClick={() => {
+                        if (userPermissions.canEdit) {
+                          collaborativeToggleBlockAdvancedMode(id)
+                        }
+                      }}
+                      className={cn(
+                        'h-7 p-1 text-gray-500',
+                        blockAdvancedMode && 'text-[#701FFC]',
+                        !userPermissions.canEdit && 'cursor-not-allowed opacity-50'
+                      )}
+                      disabled={!userPermissions.canEdit}
+                    >
+                      <Code className='h-5 w-5' />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side='top'>
+                    {!userPermissions.canEdit
+                      ? userPermissions.isOfflineMode
+                        ? 'Connection lost - please refresh'
+                        : 'Read-only mode'
+                      : blockAdvancedMode
+                        ? 'Switch to Basic Mode'
+                        : 'Switch to Advanced Mode'}
+                  </TooltipContent>
+                </Tooltip>
+              )}
+              {config.docsLink ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant='ghost'
+                      size='sm'
+                      className='h-7 p-1 text-gray-500'
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        window.open(config.docsLink, '_target', 'noopener,noreferrer')
+                      }}
+                    >
+                      <BookOpen className='h-5 w-5' />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side='top'>See Docs</TooltipContent>
+                </Tooltip>
+              ) : (
+                config.longDescription && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant='ghost' size='sm' className='h-7 p-1 text-gray-500'>
+                        <Info className='h-5 w-5' />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side='top' className='max-w-[300px] p-4'>
+                      <div className='space-y-3'>
+                        <div>
+                          <p className='mb-1 font-medium text-sm'>Description</p>
+                          <p className='text-muted-foreground text-sm'>{config.longDescription}</p>
+                        </div>
+                        {config.outputs && (
+                          <div>
+                            <p className='mb-1 font-medium text-sm'>Output</p>
+                            <div className='text-sm'>
+                              {Object.entries(config.outputs).map(([key, value]) => (
+                                <div key={key} className='mb-1'>
+                                  <span className='text-muted-foreground'>{key}</span>{' '}
+                                  {typeof value === 'object' &&
+                                  value !== null &&
+                                  'type' in value ? (
+                                    <span className='text-green-500'>{value.type}</span>
+                                  ) : typeof value === 'object' && value !== null ? (
+                                    <div className='mt-1 pl-3'>
+                                      {Object.entries(value).map(([typeKey, typeValue]) => (
+                                        <div key={typeKey} className='flex items-start'>
+                                          <span className='font-medium text-blue-500'>
+                                            {typeKey}:
+                                          </span>
+                                          <span className='ml-1 text-green-500'>
+                                            {typeValue as string}
+                                          </span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <span className='text-green-500'>{value as string}</span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                )
+              )}
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -689,17 +794,20 @@ export function WorkflowBlock({ id, data }: NodeProps<WorkflowBlockProps>) {
                     size='sm'
                     onClick={() => {
                       if (userPermissions.canEdit) {
-                        collaborativeToggleBlockAdvancedMode(id)
+                        collaborativeToggleBlockWide(id)
                       }
                     }}
                     className={cn(
                       'h-7 p-1 text-gray-500',
-                      blockAdvancedMode && 'text-[#701FFC]',
                       !userPermissions.canEdit && 'cursor-not-allowed opacity-50'
                     )}
                     disabled={!userPermissions.canEdit}
                   >
-                    <Code className='h-5 w-5' />
+                    {isWide ? (
+                      <RectangleHorizontal className='h-5 w-5' />
+                    ) : (
+                      <RectangleVertical className='h-5 w-5' />
+                    )}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side='top'>
@@ -707,112 +815,12 @@ export function WorkflowBlock({ id, data }: NodeProps<WorkflowBlockProps>) {
                     ? userPermissions.isOfflineMode
                       ? 'Connection lost - please refresh'
                       : 'Read-only mode'
-                    : blockAdvancedMode
-                      ? 'Switch to Basic Mode'
-                      : 'Switch to Advanced Mode'}
+                    : isWide
+                      ? 'Narrow Block'
+                      : 'Expand Block'}
                 </TooltipContent>
               </Tooltip>
-            )}
-            {config.docsLink ? (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant='ghost'
-                    size='sm'
-                    className='h-7 p-1 text-gray-500'
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      window.open(config.docsLink, '_target', 'noopener,noreferrer')
-                    }}
-                  >
-                    <BookOpen className='h-5 w-5' />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side='top'>See Docs</TooltipContent>
-              </Tooltip>
-            ) : (
-              config.longDescription && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant='ghost' size='sm' className='h-7 p-1 text-gray-500'>
-                      <Info className='h-5 w-5' />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side='top' className='max-w-[300px] p-4'>
-                    <div className='space-y-3'>
-                      <div>
-                        <p className='mb-1 font-medium text-sm'>Description</p>
-                        <p className='text-muted-foreground text-sm'>{config.longDescription}</p>
-                      </div>
-                      {config.outputs && (
-                        <div>
-                          <p className='mb-1 font-medium text-sm'>Output</p>
-                          <div className='text-sm'>
-                            {Object.entries(config.outputs).map(([key, value]) => (
-                              <div key={key} className='mb-1'>
-                                <span className='text-muted-foreground'>{key}</span>{' '}
-                                {typeof value === 'object' && value !== null && 'type' in value ? (
-                                  <span className='text-green-500'>{value.type}</span>
-                                ) : typeof value === 'object' && value !== null ? (
-                                  <div className='mt-1 pl-3'>
-                                    {Object.entries(value).map(([typeKey, typeValue]) => (
-                                      <div key={typeKey} className='flex items-start'>
-                                        <span className='font-medium text-blue-500'>
-                                          {typeKey}:
-                                        </span>
-                                        <span className='ml-1 text-green-500'>
-                                          {typeValue as string}
-                                        </span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <span className='text-green-500'>{value as string}</span>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-              )
-            )}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant='ghost'
-                  size='sm'
-                  onClick={() => {
-                    if (userPermissions.canEdit) {
-                      collaborativeToggleBlockWide(id)
-                    }
-                  }}
-                  className={cn(
-                    'h-7 p-1 text-gray-500',
-                    !userPermissions.canEdit && 'cursor-not-allowed opacity-50'
-                  )}
-                  disabled={!userPermissions.canEdit}
-                >
-                  {isWide ? (
-                    <RectangleHorizontal className='h-5 w-5' />
-                  ) : (
-                    <RectangleVertical className='h-5 w-5' />
-                  )}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side='top'>
-                {!userPermissions.canEdit
-                  ? userPermissions.isOfflineMode
-                    ? 'Connection lost - please refresh'
-                    : 'Read-only mode'
-                  : isWide
-                    ? 'Narrow Block'
-                    : 'Expand Block'}
-              </TooltipContent>
-            </Tooltip>
-          </div>
+            </div>
           </div>
         )}
 
@@ -845,6 +853,13 @@ export function WorkflowBlock({ id, data }: NodeProps<WorkflowBlockProps>) {
                 </div>
               ))
             : null}
+
+          <CustomBlockContent
+            type={type}
+            blockId={id}
+            isPreview={data.isPreview}
+            previewValues={data.subBlockValues}
+          />
         </div>
 
         {/* Connection Blocks - for horizontal handle mode render beneath the content */}

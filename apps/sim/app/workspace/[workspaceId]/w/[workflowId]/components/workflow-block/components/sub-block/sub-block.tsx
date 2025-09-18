@@ -18,11 +18,13 @@ import {
   InputFormat,
   KnowledgeBaseSelector,
   LongInput,
+  PlaylistEditor,
   ProjectSelectorInput,
   ResponseFormat,
   ScheduleConfig,
   ShortInput,
   SliderInput,
+  RichTextInput,
   Switch,
   Table,
   TimeInput,
@@ -157,6 +159,29 @@ export function SubBlock({
             isPreview={isPreview}
             previewValue={previewValue}
             disabled={isDisabled}
+          />
+        )
+      case 'playlist-editor':
+        return (
+          <PlaylistEditor
+            blockId={blockId}
+            subBlockId={config.id}
+            isPreview={isPreview}
+            previewValue={previewValue as any}
+            disabled={isDisabled}
+          />
+        )
+      case 'rich-text':
+        return (
+          <RichTextInput
+            blockId={blockId}
+            subBlockId={config.id}
+            placeholder={config.placeholder}
+            isConnecting={isConnecting}
+            isPreview={isPreview}
+            previewValue={previewValue as string | null}
+            disabled={isDisabled}
+            config={config}
           />
         )
       case 'code':

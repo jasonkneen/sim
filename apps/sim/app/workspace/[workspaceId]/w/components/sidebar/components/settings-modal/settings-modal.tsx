@@ -12,7 +12,10 @@ import {
   Credentials,
   EnvironmentVariables,
   General,
+  MCPServers,
+  Models,
   Privacy,
+  Providers,
   SettingsNavigation,
   Subscription,
   TeamManagement,
@@ -33,6 +36,9 @@ type SettingsSection =
   | 'account'
   | 'credentials'
   | 'apikeys'
+  | 'providers'
+  | 'models'
+  | 'mcp-servers'
   | 'subscription'
   | 'team'
   | 'privacy'
@@ -128,6 +134,15 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
             </div>
             <div className={cn('h-full', activeSection === 'apikeys' ? 'block' : 'hidden')}>
               <ApiKeys onOpenChange={onOpenChange} />
+            </div>
+            <div className={cn('h-full', activeSection === 'providers' ? 'block' : 'hidden')}>
+              <Providers />
+            </div>
+            <div className={cn('h-full', activeSection === 'models' ? 'block' : 'hidden')}>
+              <Models />
+            </div>
+            <div className={cn('h-full', activeSection === 'mcp-servers' ? 'block' : 'hidden')}>
+              <MCPServers />
             </div>
             {isSubscriptionEnabled && (
               <div className={cn('h-full', activeSection === 'subscription' ? 'block' : 'hidden')}>

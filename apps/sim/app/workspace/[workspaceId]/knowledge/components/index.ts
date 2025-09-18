@@ -1,5 +1,6 @@
 export { BaseOverview } from './base-overview/base-overview'
 export { CreateModal } from './create-modal/create-modal'
+export { EditModal } from './edit-modal/edit-modal'
 export { EmptyStateCard } from './empty-state-card/empty-state-card'
 export { getDocumentIcon } from './icons/document-icons'
 export { KnowledgeHeader } from './knowledge-header/knowledge-header'

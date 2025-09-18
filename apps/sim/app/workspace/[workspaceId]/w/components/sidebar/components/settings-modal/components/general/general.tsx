@@ -187,25 +187,30 @@ export function General() {
                       <p className='text-sm'>{TOOLTIPS.consoleExpandedByDefault}</p>
                     </TooltipContent>
                   </Tooltip>
+                </div>
+                <Switch
+                  id='console-expanded-by-default'
+                  checked={isConsoleExpandedByDefault}
+                  onCheckedChange={handleConsoleExpandedByDefaultChange}
+                  disabled={isLoading || isConsoleExpandedByDefaultLoading}
+                />
               </div>
-              <Switch
-                id='console-expanded-by-default'
-                checked={isConsoleExpandedByDefault}
-                onCheckedChange={handleConsoleExpandedByDefaultChange}
-                disabled={isLoading || isConsoleExpandedByDefaultLoading}
-              />
-            </div>
 
               <div className='flex items-center justify-between py-1'>
                 <div className='flex flex-col gap-1'>
                   <Label htmlFor='node-title-display-mode' className='font-medium'>
                     Node title display
                   </Label>
-                  <p className='text-muted-foreground text-xs'>Toggle between titles inside the node or outside (top-left) while staying editable.</p>
+                  <p className='text-muted-foreground text-xs'>
+                    Toggle between titles inside the node or outside (top-left) while staying
+                    editable.
+                  </p>
                 </div>
                 <Select
                   value={nodeTitleDisplayMode}
-                  onValueChange={(value: 'default' | 'full') => setNodeTitleDisplayMode(value)}
+                  onValueChange={(value: 'default' | 'full' | 'hidden') =>
+                    setNodeTitleDisplayMode(value)
+                  }
                   disabled={isLoading || isNodeTitleDisplayModeLoading}
                 >
                   <SelectTrigger id='node-title-display-mode' className='w-[200px]'>
@@ -214,6 +219,7 @@ export function General() {
                   <SelectContent>
                     <SelectItem value='default'>Default (title outside)</SelectItem>
                     <SelectItem value='full'>Full (title inside)</SelectItem>
+                    <SelectItem value='hidden'>Hidden (no title)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

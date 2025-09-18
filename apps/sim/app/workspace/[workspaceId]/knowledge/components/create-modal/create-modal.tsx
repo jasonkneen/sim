@@ -99,7 +99,12 @@ export function CreateModal({ open, onOpenChange, onKnowledgeBaseCreated }: Crea
     return () => {
       files.forEach((file) => {
         if (file.preview) {
-          URL.revokeObjectURL(file.preview)
+          try {
+            URL.revokeObjectURL(file.preview)
+          } catch (error) {
+            // Silently ignore revoke errors - URL may already be revoked
+            logger.debug('Failed to revoke object URL:', error)
+          }
         }
       })
     }
@@ -148,9 +153,9 @@ export function CreateModal({ open, onOpenChange, onKnowledgeBaseCreated }: Crea
           continue
         }
 
-        // Create file with preview (using file icon since these aren't images)
+        // Create file with preview (we don't actually need a blob URL for non-image files)
         const fileWithPreview = Object.assign(file, {
-          preview: URL.createObjectURL(file),
+          preview: '', // Empty string since we're not showing image previews
         }) as FileWithPreview
 
         newFiles.push(fileWithPreview)
@@ -221,8 +226,15 @@ export function CreateModal({ open, onOpenChange, onKnowledgeBaseCreated }: Crea
 
   const removeFile = (index: number) => {
     setFiles((prev) => {
-      // Revoke the URL to avoid memory leaks
-      URL.revokeObjectURL(prev[index].preview)
+      // Revoke the URL to avoid memory leaks (if it exists)
+      if (prev[index].preview) {
+        try {
+          URL.revokeObjectURL(prev[index].preview)
+        } catch (error) {
+          // Silently ignore revoke errors
+          logger.debug('Failed to revoke object URL:', error)
+        }
+      }
       return prev.filter((_, i) => i !== index)
     })
   }
@@ -305,7 +317,16 @@ export function CreateModal({ open, onOpenChange, onKnowledgeBaseCreated }: Crea
       })
 
       // Clean up file previews
-      files.forEach((file) => URL.revokeObjectURL(file.preview))
+      files.forEach((file) => {
+        if (file.preview) {
+          try {
+            URL.revokeObjectURL(file.preview)
+          } catch (error) {
+            // Silently ignore revoke errors
+            logger.debug('Failed to revoke object URL:', error)
+          }
+        }
+      })
       setFiles([])
 
       // Call the callback if provided

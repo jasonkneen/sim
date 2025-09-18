@@ -276,7 +276,7 @@ export function Table({
         </table>
       </div>
 
-      {activeCell?.element && (
+      {activeCell?.element && rows[activeCell.rowIndex] && (
         <>
           <EnvVarDropdown
             visible={activeCell.showEnvVars}
@@ -285,7 +285,7 @@ export function Table({
               setActiveCell(null)
             }}
             searchTerm={activeCell.searchTerm}
-            inputValue={rows[activeCell.rowIndex].cells[activeCell.column] || ''}
+            inputValue={rows[activeCell.rowIndex]?.cells?.[activeCell.column] || ''}
             cursorPosition={activeCell.cursorPosition}
             onClose={() => {
               setActiveCell((prev) => (prev ? { ...prev, showEnvVars: false } : null))
@@ -300,7 +300,7 @@ export function Table({
             }}
             blockId={blockId}
             activeSourceBlockId={activeCell.activeSourceBlockId}
-            inputValue={rows[activeCell.rowIndex].cells[activeCell.column] || ''}
+            inputValue={rows[activeCell.rowIndex]?.cells?.[activeCell.column] || ''}
             cursorPosition={activeCell.cursorPosition}
             onClose={() => {
               setActiveCell((prev) =>

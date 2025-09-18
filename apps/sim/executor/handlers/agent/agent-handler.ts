@@ -28,7 +28,7 @@ const CUSTOM_TOOL_PREFIX = 'custom_'
  */
 export class AgentBlockHandler implements BlockHandler {
   canHandle(block: SerializedBlock): boolean {
-    return block.metadata?.id === BlockType.AGENT
+    return block.metadata?.id === BlockType.AGENT || block.metadata?.id === BlockType.SMART
   }
 
   async execute(
@@ -783,7 +783,8 @@ export class AgentBlockHandler implements BlockHandler {
     }
   }
 
-  private stripCustomToolPrefix(name: string): string {
+  private stripCustomToolPrefix(name?: string): string {
+    if (!name) return ''
     return name.startsWith('custom_') ? name.replace('custom_', '') : name
   }
 }

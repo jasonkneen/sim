@@ -3,7 +3,7 @@ export interface General {
   isAutoPanEnabled: boolean
   isConsoleExpandedByDefault: boolean
   isDebugModeEnabled: boolean
-  nodeTitleDisplayMode: 'default' | 'full'
+  nodeTitleDisplayMode: 'default' | 'full' | 'hidden'
   theme: 'system' | 'light' | 'dark'
   telemetryEnabled: boolean
   telemetryNotifiedUser: boolean
@@ -23,7 +23,7 @@ export interface GeneralActions {
 
   toggleAutoPan: () => Promise<void>
   toggleConsoleExpandedByDefault: () => Promise<void>
-  setNodeTitleDisplayMode: (mode: 'default' | 'full') => Promise<void>
+  setNodeTitleDisplayMode: (mode: 'default' | 'full' | 'hidden') => Promise<void>
   toggleDebugMode: () => void
   setTheme: (theme: 'system' | 'light' | 'dark') => Promise<void>
   setTelemetryEnabled: (enabled: boolean) => Promise<void>
@@ -39,7 +39,7 @@ export type UserSettings = {
   autoConnect: boolean
   autoPan: boolean
   consoleExpandedByDefault: boolean
-  nodeTitleDisplayMode: 'default' | 'full'
+  nodeTitleDisplayMode: 'default' | 'full' | 'hidden'
   telemetryEnabled: boolean
   telemetryNotifiedUser: boolean
 }

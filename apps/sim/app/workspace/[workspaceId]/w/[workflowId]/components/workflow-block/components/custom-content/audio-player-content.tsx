@@ -1,0 +1,459 @@
+'use client'
+
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  Music2,
+  Pause,
+  Play,
+  Radio,
+  Repeat,
+  Shuffle,
+  SkipBack,
+  SkipForward,
+  Volume2,
+} from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Progress } from '@/components/ui/progress'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { cn } from '@/lib/utils'
+import type { CustomBlockContentProps } from './types'
+import { useResolvedSubBlockValue } from './use-resolved-subblock-value'
+
+type PlaylistTrack = {
+  id: string
+  title: string
+  url: string
+  artist?: string
+  coverImage?: string
+  durationSeconds?: number
+}
+
+function clampIndex(index: number, length: number) {
+  if (length === 0) return 0
+  return ((index % length) + length) % length
+}
+
+export function AudioPlayerContent({ blockId, isPreview, previewValues }: CustomBlockContentProps) {
+  const [playlist, setPlaylist] = useResolvedSubBlockValue<PlaylistTrack[] | null>(
+    blockId,
+    'playlist',
+    {
+      isPreview,
+      previewValues,
+    }
+  )
+  const [rawIndex, setRawIndex] = useResolvedSubBlockValue<string | number | null>(
+    blockId,
+    'currentTrackIndex',
+    {
+      isPreview,
+      previewValues,
+    }
+  )
+  const [loop] = useResolvedSubBlockValue<boolean>(blockId, 'loop', { isPreview, previewValues })
+  const [shuffle] = useResolvedSubBlockValue<boolean>(blockId, 'shuffle', {
+    isPreview,
+    previewValues,
+  })
+  const [radioMode] = useResolvedSubBlockValue<boolean>(blockId, 'radioMode', {
+    isPreview,
+    previewValues,
+  })
+  const [autoPlay] = useResolvedSubBlockValue<boolean>(blockId, 'autoPlay', {
+    isPreview,
+    previewValues,
+  })
+
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const [isPlaying, setIsPlaying] = useState(Boolean(autoPlay))
+  const [isLoading, setIsLoading] = useState(false)
+  const [progress, setProgress] = useState(0)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
+  const [isDragActive, setIsDragActive] = useState(false)
+
+  const playlistArray = useMemo(
+    () => (playlist && Array.isArray(playlist) ? playlist : []),
+    [playlist]
+  )
+  const playlistRef = useRef<PlaylistTrack[]>(playlistArray)
+
+  useEffect(() => {
+    playlistRef.current = playlistArray
+  }, [playlistArray])
+
+  const tracks = useMemo(() => playlistArray.filter((track) => track?.url), [playlistArray])
+  const parsedIndex = useMemo(() => {
+    if (typeof rawIndex === 'number') return rawIndex
+    if (typeof rawIndex === 'string' && rawIndex !== '') {
+      const parsed = Number.parseInt(rawIndex, 10)
+      if (!Number.isNaN(parsed)) {
+        return parsed
+      }
+    }
+    return 0
+  }, [rawIndex])
+
+  const activeIndex = clampIndex(parsedIndex, tracks.length)
+  const activeTrack = tracks[activeIndex]
+
+  const updatePlaylist = useCallback(
+    (updater: (current: PlaylistTrack[]) => PlaylistTrack[] | null) => {
+      if (isPreview) return
+      const next = updater(playlistRef.current)
+      if (!next) return
+      playlistRef.current = next
+      setPlaylist(next)
+    },
+    [isPreview, setPlaylist]
+  )
+
+  const ingestFiles = useCallback(
+    async (files: FileList | File[]) => {
+      if (isPreview) return
+      const list = Array.from(files)
+      if (list.length === 0) return
+
+      const dataUrls = await Promise.all(
+        list.map(
+          (file) =>
+            new Promise<PlaylistTrack>((resolve, reject) => {
+              const reader = new FileReader()
+              reader.onerror = () => reject(new Error('Failed to read audio file'))
+              reader.onload = () => {
+                resolve({
+                  id: crypto.randomUUID(),
+                  title: file.name.replace(/\.[^/.]+$/, ''),
+                  url: reader.result as string,
+                  artist: undefined,
+                  coverImage: undefined,
+                  durationSeconds: undefined,
+                })
+              }
+              reader.readAsDataURL(file)
+            })
+        )
+      )
+
+      updatePlaylist((current) => [...current, ...dataUrls])
+    },
+    [isPreview, updatePlaylist]
+  )
+
+  useEffect(() => {
+    if (!autoPlay) return
+    if (!tracks.length) return
+    setIsPlaying(true)
+  }, [autoPlay, tracks.length])
+
+  useEffect(() => {
+    const audio = audioRef.current
+    if (!audio) return
+
+    if (isPlaying && activeTrack?.url) {
+      audio
+        .play()
+        .then(() => setIsLoading(false))
+        .catch(() => {
+          setIsPlaying(false)
+        })
+    } else {
+      audio.pause()
+    }
+  }, [isPlaying, activeTrack?.url])
+
+  const changeTrack = (nextIndex: number, options?: { autoplay?: boolean }) => {
+    const boundedIndex = clampIndex(nextIndex, tracks.length)
+    if (boundedIndex === activeIndex) {
+      // force reload
+      const audio = audioRef.current
+      if (audio) {
+        audio.currentTime = 0
+        audio.play().catch(() => setIsPlaying(false))
+      }
+      return
+    }
+
+    setIsLoading(true)
+    setProgress(0)
+    setCurrentTime(0)
+    setDuration(0)
+    if (!isPreview) {
+      setRawIndex(String(boundedIndex))
+    }
+    setIsPlaying((prev) => {
+      if (typeof options?.autoplay === 'boolean') {
+        return options.autoplay
+      }
+      return prev
+    })
+  }
+
+  const handleFileInputClick = () => {
+    if (isPreview) return
+    fileInputRef.current?.click()
+  }
+
+  const handleFileInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files) return
+    void ingestFiles(event.target.files)
+    // reset so same file can be selected again if needed
+    event.target.value = ''
+  }
+
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    event.stopPropagation()
+    if (isPreview) return
+    event.dataTransfer.dropEffect = 'copy'
+    setIsDragActive(true)
+  }
+
+  const handleDragLeave = () => {
+    setIsDragActive(false)
+  }
+
+  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    event.stopPropagation()
+    if (isPreview) return
+    setIsDragActive(false)
+    const { files } = event.dataTransfer
+    if (files && files.length > 0) {
+      void ingestFiles(files)
+    }
+  }
+
+  const handleNext = () => {
+    if (shuffle) {
+      const randomIndex = Math.floor(Math.random() * tracks.length)
+      changeTrack(randomIndex)
+      return
+    }
+    changeTrack(activeIndex + 1)
+  }
+
+  const handlePrevious = () => {
+    if (shuffle) {
+      const randomIndex = Math.floor(Math.random() * tracks.length)
+      changeTrack(randomIndex)
+      return
+    }
+    changeTrack(activeIndex - 1)
+  }
+
+  const handleEnded = () => {
+    if (loop) {
+      changeTrack(activeIndex + 1, { autoplay: true })
+      return
+    }
+
+    if (radioMode) {
+      // Radio mode reuses shuffle behaviour to simulate new track discovery
+      const randomIndex = Math.floor(Math.random() * tracks.length)
+      changeTrack(randomIndex, { autoplay: true })
+      return
+    }
+
+    setIsPlaying(false)
+  }
+
+  if (!tracks.length) {
+    return (
+      <div
+        className={cn(
+          'rounded-lg border border-border/70 border-dashed bg-muted/40 p-4 text-center text-muted-foreground text-sm transition-colors',
+          isDragActive && !isPreview && 'border-primary/60 bg-primary/5 text-primary'
+        )}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        <p className='mb-2 font-medium'>Drop audio files here to build a playlist.</p>
+        <p className='text-muted-foreground text-xs'>
+          Supports multiple `.mp3`, `.wav`, `.ogg`, and `.aac` files.
+        </p>
+        <div className='mt-3 flex justify-center'>
+          <Button
+            type='button'
+            variant='outline'
+            size='sm'
+            onClick={handleFileInputClick}
+            disabled={isPreview}
+          >
+            Choose files
+          </Button>
+        </div>
+        <input
+          ref={fileInputRef}
+          type='file'
+          accept='audio/*'
+          multiple
+          className='hidden'
+          onChange={handleFileInputChange}
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div className='space-y-4 rounded-lg border border-border/70 bg-card/50 p-4'>
+      <input
+        ref={fileInputRef}
+        type='file'
+        accept='audio/*'
+        multiple
+        className='hidden'
+        onChange={handleFileInputChange}
+      />
+      <div className='flex flex-col gap-3 md:flex-row md:items-start md:justify-between'>
+        <div>
+          <p className='text-muted-foreground text-xs uppercase tracking-wide'>Now playing</p>
+          <h3 className='font-semibold text-lg leading-tight'>
+            {activeTrack?.title || 'Untitled track'}
+          </h3>
+          {activeTrack?.artist && (
+            <p className='text-muted-foreground text-sm'>{activeTrack.artist}</p>
+          )}
+        </div>
+        <div className='flex flex-wrap items-center gap-2 text-muted-foreground text-xs'>
+          {loop && (
+            <span className='inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1'>
+              <Repeat className='h-3 w-3' /> Loop
+            </span>
+          )}
+          {shuffle && (
+            <span className='inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1'>
+              <Shuffle className='h-3 w-3' /> Shuffle
+            </span>
+          )}
+          {radioMode && (
+            <span className='inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1'>
+              <Radio className='h-3 w-3' /> Radio
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className='flex flex-col gap-3 rounded-md border border-border/60 bg-background/60 p-3'>
+        {/* biome-ignore lint/a11y/useMediaCaption: Captions will be attached when transcript metadata is available from upstream services. */}
+        <audio
+          ref={audioRef}
+          src={activeTrack?.url}
+          onTimeUpdate={(event) => {
+            const el = event.currentTarget
+            if (!el.duration || Number.isNaN(el.duration)) return
+            setCurrentTime(el.currentTime)
+            setDuration(el.duration)
+            setProgress((el.currentTime / el.duration) * 100)
+          }}
+          onLoadedMetadata={(event) => {
+            const el = event.currentTarget
+            if (!Number.isFinite(el.duration)) return
+            setDuration(el.duration)
+          }}
+          onPlay={() => setIsPlaying(true)}
+          onPause={() => setIsPlaying(false)}
+          onEnded={handleEnded}
+          onLoadStart={() => setIsLoading(true)}
+          onCanPlay={() => setIsLoading(false)}
+          preload='metadata'
+        />
+        <div className='flex items-center gap-3'>
+          <Button
+            size='icon'
+            variant='ghost'
+            onClick={handlePrevious}
+            disabled={tracks.length <= 1}
+          >
+            <SkipBack className='h-5 w-5' />
+          </Button>
+          <Button
+            size='icon'
+            onClick={() => setIsPlaying((prev) => !prev)}
+            className='h-12 w-12 rounded-full'
+            disabled={!activeTrack?.url}
+          >
+            {isPlaying ? <Pause className='h-6 w-6' /> : <Play className='h-6 w-6' />}
+          </Button>
+          <Button size='icon' variant='ghost' onClick={handleNext} disabled={tracks.length <= 1}>
+            <SkipForward className='h-5 w-5' />
+          </Button>
+          <div className='ml-auto flex items-center gap-2 text-muted-foreground text-xs'>
+            <Volume2 className='h-4 w-4' />
+            {/* Leaving actual volume control to browser UI; show duration summary */}
+            <span>
+              {Math.floor(currentTime / 60)
+                .toString()
+                .padStart(2, '0')}
+              :
+              {Math.floor(currentTime % 60)
+                .toString()
+                .padStart(2, '0')}
+              {' / '}
+              {Math.floor(duration / 60)
+                .toString()
+                .padStart(2, '0')}
+              :
+              {Math.floor(duration % 60)
+                .toString()
+                .padStart(2, '0')}
+            </span>
+          </div>
+        </div>
+        <Progress value={progress} className='h-1 w-full' />
+        {isLoading && <p className='text-muted-foreground text-xs'>Buffering audio…</p>}
+      </div>
+
+      <div className='space-y-2'>
+        <p className='text-muted-foreground text-xs uppercase tracking-wide'>Playlist</p>
+        <ScrollArea className='max-h-40 rounded-md border border-border/60 bg-background/40'>
+          <div
+            className={cn('divide-y divide-border/60', !isPreview && 'cursor-copy')}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
+            {tracks.map((track, index) => {
+              const isActive = index === activeIndex
+              return (
+                <button
+                  key={track.id}
+                  type='button'
+                  className={cn(
+                    'flex w-full items-center gap-3 px-3 py-2 text-left text-sm transition hover:bg-muted/70',
+                    isActive && 'bg-primary/10 text-primary'
+                  )}
+                  onClick={() => changeTrack(index)}
+                  disabled={!track.url}
+                >
+                  <div className='flex h-8 w-8 items-center justify-center rounded-md border border-border/60 bg-background/80'>
+                    {isActive ? (
+                      <Music2 className='h-4 w-4' />
+                    ) : (
+                      <span className='text-muted-foreground text-xs'>{index + 1}</span>
+                    )}
+                  </div>
+                  <div className='min-w-0 flex-1'>
+                    <p className='truncate font-medium'>{track.title || `Track ${index + 1}`}</p>
+                    {track.artist && (
+                      <p className='truncate text-muted-foreground text-xs'>{track.artist}</p>
+                    )}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </ScrollArea>
+        {!isPreview && (
+          <div className='flex justify-end'>
+            <Button type='button' variant='outline' size='sm' onClick={handleFileInputClick}>
+              Add audio files
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
