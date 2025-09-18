@@ -37,7 +37,7 @@ export function ActionBar({ blockId, blockType, disabled = false }: ActionBarPro
   return (
     <div
       className={cn(
-        'absolute top-0 left-1/2 -translate-x-1/2 -translate-y-full -translate-y-[5px]',
+        'absolute top-0 left-1/2 -translate-x-1/2 -translate-y-[calc(100%+8px)]',
         'z-30 flex items-center gap-1.5 rounded-full px-2.5 py-1',
         'rounded-full border border-gray-200 bg-background shadow-sm dark:border-gray-800',
         'opacity-0 transition-opacity duration-200 group-hover:opacity-100'

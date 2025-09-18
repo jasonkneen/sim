@@ -1,3 +1,4 @@
+import type { CSSProperties, ComponentType } from 'react'
 import { RepeatIcon, SplitIcon } from 'lucide-react'
 import {
   type ConnectedBlock,
@@ -79,17 +80,37 @@ export function ConnectionBlocks({
 
     // Handle special blocks that aren't in the registry (loop and parallel)
     let Icon = blockConfig?.icon
-    let bgColor = blockConfig?.bgColor || '#6B7280' // Fallback to gray
+    const accentColor = blockConfig?.bgColor || '#6B7280'
 
     if (!blockConfig) {
       if (connection.type === 'loop') {
-        Icon = RepeatIcon as typeof Icon
-        bgColor = '#2FB3FF' // Blue color for loop blocks
-      } else if (connection.type === 'parallel') {
-        Icon = SplitIcon as typeof Icon
-        bgColor = '#FEE12B' // Yellow color for parallel blocks
+        return renderChip(connection, RepeatIcon, '#2FB3FF')
+      }
+      if (connection.type === 'parallel') {
+        return renderChip(connection, SplitIcon, '#FEE12B')
       }
     }
+
+    return renderChip(connection, Icon, accentColor)
+  }
+
+  function renderChip(
+    connection: ConnectedBlock,
+    IconComponent: ComponentType<{ className?: string }> | undefined,
+    accentColor: string
+  ) {
+    const displayName = connection.name
+    const sharedStyles: CSSProperties = {
+      borderColor: accentColor,
+      backgroundColor: accentColor,
+    }
+
+    const baseClasses =
+      'group inline-flex w-max items-center gap-1 rounded-full border bg-card/60 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.04em] text-white'
+
+    const enabledClasses =
+      'cursor-grab transition-transform active:cursor-grabbing'
+    const disabledClasses = 'cursor-not-allowed opacity-50'
 
     return (
       <div
@@ -97,22 +118,20 @@ export function ConnectionBlocks({
         draggable={!isDisabled}
         onDragStart={(e) => handleDragStart(e, connection)}
         onDragEnd={handleDragEnd}
-        className={
-          !isDisabled
-            ? 'group inline-flex w-max items-center gap-1 rounded-full border border-border/70 bg-card/70 px-2 py-1 text-xs font-medium text-muted-foreground transition-colors cursor-grab hover:bg-accent/70 active:cursor-grabbing'
-            : 'group inline-flex w-max items-center gap-1 rounded-full border border-border/70 bg-card/70 px-2 py-1 text-xs font-medium text-muted-foreground/60 cursor-not-allowed opacity-60'
-        }
+        className={`${baseClasses} ${isDisabled ? disabledClasses : enabledClasses}`}
+        style={sharedStyles}
       >
-        {/* Block icon with color */}
-        {Icon && (
+        {IconComponent && (
           <div
-            className='flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full'
-            style={{ backgroundColor: bgColor }}
+            className='flex h-3.5 w-3.5 flex-shrink-0 items-center justify-center rounded-full'
+            style={{ backgroundColor: accentColor }}
           >
-            <Icon className='h-3 w-3 text-white' />
+            <IconComponent className='h-2.5 w-2.5 text-white' />
           </div>
         )}
-        <span className='leading-none text-foreground/80'>{displayName}</span>
+        <span className='leading-none text-white'>
+          {displayName.toUpperCase()}
+        </span>
       </div>
     )
   }
