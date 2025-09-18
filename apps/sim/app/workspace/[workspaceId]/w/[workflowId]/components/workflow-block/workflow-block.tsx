@@ -541,16 +541,17 @@ export function WorkflowBlock({ id, data, selected }: NodeProps<WorkflowBlockPro
             position={horizontalHandles ? Position.Left : Position.Top}
             id='target'
             className={cn(
-              horizontalHandles ? '!w-[7px] !h-5' : '!w-5 !h-[7px]',
-              '!bg-slate-300 dark:!bg-slate-500 !rounded-[2px] !border-none',
+              horizontalHandles ? '!w-[10px] !h-5' : '!w-5 !h-[10px]',
+              '!bg-slate-300 dark:!bg-slate-500 !border-none',
+              horizontalHandles ? '!rounded-l-md !rounded-r-none' : '!rounded-t-md !rounded-b-none',
               '!z-[30]',
               'group-hover:!shadow-[0_0_0_3px_rgba(156,163,175,0.15)]',
               horizontalHandles
-                ? 'hover:!w-[10px] hover:!left-[-12px] hover:!rounded-l-full hover:!rounded-r-none'
-                : 'hover:!h-[10px] hover:!top-[-12px] hover:!rounded-t-full hover:!rounded-b-none',
+                ? 'hover:!w-[12px] hover:!left-[-18px] hover:!rounded-l-lg hover:!rounded-r-none'
+                : 'hover:!h-[12px] hover:!top-[-18px] hover:!rounded-t-lg hover:!rounded-b-none',
               '!cursor-crosshair',
               'transition-[colors] duration-150',
-              horizontalHandles ? '!left-[-9px]' : '!top-[-9px]'
+              horizontalHandles ? '!left-[-15px]' : '!top-[-15px]'
             )}
             style={{
               ...(horizontalHandles
@@ -884,16 +885,17 @@ export function WorkflowBlock({ id, data, selected }: NodeProps<WorkflowBlockPro
               position={horizontalHandles ? Position.Right : Position.Bottom}
               id='source'
               className={cn(
-                horizontalHandles ? '!w-[7px] !h-5' : '!w-5 !h-[7px]',
-                '!bg-slate-300 dark:!bg-slate-500 !rounded-[2px] !border-none',
+                horizontalHandles ? '!w-[10px] !h-5' : '!w-5 !h-[10px]',
+                '!bg-slate-300 dark:!bg-slate-500 !border-none',
+                horizontalHandles ? '!rounded-r-md !rounded-l-none' : '!rounded-b-md !rounded-t-none',
                 '!z-[30]',
                 'group-hover:!shadow-[0_0_0_3px_rgba(156,163,175,0.15)]',
                 horizontalHandles
-                  ? 'hover:!w-[10px] hover:!right-[-12px] hover:!rounded-r-full hover:!rounded-l-none'
-                  : 'hover:!h-[10px] hover:!bottom-[-12px] hover:!rounded-b-full hover:!rounded-t-none',
+                  ? 'hover:!w-[12px] hover:!right-[-18px] hover:!rounded-r-lg hover:!rounded-l-none'
+                  : 'hover:!h-[12px] hover:!bottom-[-18px] hover:!rounded-b-lg hover:!rounded-t-none',
                 '!cursor-crosshair',
                 'transition-[colors] duration-150',
-                horizontalHandles ? '!right-[-9px]' : '!bottom-[-9px]'
+                horizontalHandles ? '!right-[-15px]' : '!bottom-[-15px]'
               )}
               style={{
                 ...(horizontalHandles
@@ -914,13 +916,14 @@ export function WorkflowBlock({ id, data, selected }: NodeProps<WorkflowBlockPro
                 position={horizontalHandles ? Position.Right : Position.Bottom}
                 id='error'
                 className={cn(
-                  horizontalHandles ? '!w-[7px] !h-5' : '!w-5 !h-[7px]',
-                  '!bg-red-400 dark:!bg-red-500 !rounded-[2px] !border-none',
+                  horizontalHandles ? '!w-[10px] !h-5' : '!w-5 !h-[10px]',
+                  '!bg-red-400 dark:!bg-red-500 !border-none',
+                  horizontalHandles ? '!rounded-r-md !rounded-l-none' : '!rounded-b-md !rounded-t-none',
                   '!z-[30]',
                   'group-hover:!shadow-[0_0_0_3px_rgba(248,113,113,0.15)]',
                   horizontalHandles
-                    ? 'hover:!w-[10px] hover:!right-[-10px] hover:!rounded-r-full hover:!rounded-l-none'
-                    : 'hover:!h-[10px] hover:!bottom-[-10px] hover:!rounded-b-full hover:!rounded-t-none',
+                    ? 'hover:!w-[12px] hover:!right-[-18px] hover:!rounded-r-lg hover:!rounded-l-none'
+                    : 'hover:!h-[12px] hover:!bottom-[-18px] hover:!rounded-b-lg hover:!rounded-t-none',
                   '!cursor-crosshair',
                   'transition-[colors] duration-150'
                 )}
@@ -928,13 +931,13 @@ export function WorkflowBlock({ id, data, selected }: NodeProps<WorkflowBlockPro
                   position: 'absolute',
                   ...(horizontalHandles
                     ? {
-                        right: '-8px',
+                        right: '-15px',
                         top: 'auto',
                         bottom: '30px',
                         transform: 'translateY(0)',
                       }
                     : {
-                        bottom: '-7px',
+                        bottom: '-15px',
                         left: 'auto',
                         right: '30px',
                         transform: 'translateX(0)',
