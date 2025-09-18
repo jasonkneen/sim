@@ -1,7 +1,10 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Bot, Loader2, Sparkles, Trash2, User } from 'lucide-react'
+import { Bot, Loader2, Plus, Sparkles, Trash2, User } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -23,6 +26,7 @@ import { Slider } from '@/components/ui/slider'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import { useWorkflowExecution } from '@/app/workspace/[workspaceId]/w/[workflowId]/hooks/use-workflow-execution'
+import { useCollaborativeWorkflow } from '@/hooks/use-collaborative-workflow'
 import { useWorkflowStore } from '@/stores/workflows/workflow/store'
 import type { CustomBlockContentProps } from './types'
 import { useResolvedSubBlockValue } from './use-resolved-subblock-value'
@@ -135,6 +139,10 @@ export function SmartNodeContent({ blockId, isPreview, previewValues }: CustomBl
     isPreview,
     previewValues,
   })
+  const [contentMode, setContentMode] = useResolvedSubBlockValue<string>(blockId, 'contentMode', {
+    isPreview,
+    previewValues,
+  })
 
   const conversation = useMemo(() => {
     const messages = Array.isArray(storedConversation) ? storedConversation : []
@@ -174,6 +182,8 @@ export function SmartNodeContent({ blockId, isPreview, previewValues }: CustomBl
   const [isSending, setIsSending] = useState(false)
   const { handleRunBlock, isExecuting } = useWorkflowExecution()
   const { open: openSettings, close: closeSettings, openBlockId } = useSmartNodeSettingsStore()
+  const { collaborativeAddBlock, collaborativeAddEdge } = useCollaborativeWorkflow()
+  const { blocks } = useWorkflowStore()
   const updateBlockHeight = useWorkflowStore((state) => state.updateBlockHeight)
 
   const disabled = isPreview || isSending || isExecuting
@@ -192,6 +202,46 @@ export function SmartNodeContent({ blockId, isPreview, previewValues }: CustomBl
     appendConversation([])
     setMemories([])
   }, [appendConversation, isPreview, setMemories])
+
+  const handleAddConnectedNode = useCallback(async () => {
+    if (isPreview) return
+
+    const currentBlock = blocks[blockId]
+    if (!currentBlock) return
+
+    // Create new smart node positioned to the right
+    const newNodeId = crypto.randomUUID()
+    const newPosition = {
+      x: currentBlock.position.x + (currentBlock.isWide ? 520 : 360), // Account for node width + gap
+      y: currentBlock.position.y,
+    }
+
+    // Create new smart node with inherited context
+    await collaborativeAddBlock(
+      newNodeId,
+      'smart',
+      `Smart Node ${Object.keys(blocks).filter(id => blocks[id].type === 'smart').length + 1}`,
+      newPosition,
+      {
+        conversation: conversation, // Inherit conversation history
+        model: model || DEFAULT_MODEL, // Inherit model
+        systemPrompt: systemPrompt || DEFAULT_SYSTEM_PROMPT, // Inherit system prompt
+        temperature: temperature || 0.7, // Inherit temperature
+        apiKey: apiKey || '', // Inherit API key
+        contentMode: contentMode || 'scroll', // Inherit content display mode
+      }
+    )
+
+    // Connect current node to new node
+    await collaborativeAddEdge({
+      id: `${blockId}-${newNodeId}`,
+      source: blockId,
+      target: newNodeId,
+      sourceHandle: 'source',
+      targetHandle: 'target',
+      type: 'workflowEdge',
+    })
+  }, [isPreview, blocks, blockId, collaborativeAddBlock, collaborativeAddEdge, conversation, model, systemPrompt, temperature, apiKey, contentMode])
 
   const handleSend = useCallback(async () => {
     const trimmed = input.trim()
@@ -363,6 +413,18 @@ export function SmartNodeContent({ blockId, isPreview, previewValues }: CustomBl
         {model || DEFAULT_MODEL}
       </div>
 
+      {/* Add connected node button */}
+      {!isPreview && (
+        <Button
+          onClick={handleAddConnectedNode}
+          size='sm'
+          className='absolute right-[-50px] top-4 z-30 h-8 w-8 rounded-full p-0 bg-foreground text-background hover:bg-foreground/90 shadow-lg hover:shadow-xl transition-shadow duration-200'
+          disabled={disabled}
+        >
+          <Plus className='h-4 w-4' />
+        </Button>
+      )}
+
       <Dialog
         open={isSettingsOpen}
         onOpenChange={(next) => {
@@ -451,6 +513,26 @@ export function SmartNodeContent({ blockId, isPreview, previewValues }: CustomBl
                 className='text-sm'
               />
             </div>
+            <div className='space-y-2'>
+              <label className='block font-medium text-muted-foreground text-xs uppercase tracking-wide'>
+                Content Display
+              </label>
+              <Select
+                value={contentMode || 'scroll'}
+                onValueChange={(value) => {
+                  if (isPreview) return
+                  setContentMode(value)
+                }}
+              >
+                <SelectTrigger className='h-9 text-sm'>
+                  <SelectValue placeholder='Select display mode' />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='scroll'>Scroll Content</SelectItem>
+                  <SelectItem value='grow'>Grow Block</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <Button variant='outline' size='sm' className='w-full gap-2' onClick={handleClear}>
               <Trash2 className='h-3.5 w-3.5' />
               Clear conversation
@@ -496,7 +578,10 @@ export function SmartNodeContent({ blockId, isPreview, previewValues }: CustomBl
             <span>Send a prompt to generate the first reply.</span>
           </div>
         ) : (
-          <ScrollArea className='max-h-[480px] rounded-2xl'>
+          <div className={cn(
+            'rounded-2xl',
+            contentMode === 'grow' ? 'max-h-none' : 'max-h-[480px] overflow-y-auto'
+          )}>
             <div className='flex flex-col gap-0.5 pr-2'>
               {conversation.map((message) => {
                 const isAssistant = message.role === 'assistant'
@@ -520,26 +605,57 @@ export function SmartNodeContent({ blockId, isPreview, previewValues }: CustomBl
                         {new Date(message.timestamp).toLocaleTimeString()}
                       </span>
                     </div>
-                    <div
-                      className={cn(
-                        'whitespace-pre-wrap text-[13px] leading-relaxed',
+                    {isThinking ? (
+                      <span className='flex items-center gap-2 text-muted-foreground text-[13px]'>
+                        <Loader2 className='h-3.5 w-3.5 animate-spin' />
+                        Thinking…
+                      </span>
+                    ) : (
+                      <div className={cn(
+                        'text-[13px] leading-relaxed',
                         !isAssistant && 'font-semibold'
-                      )}
-                    >
-                      {isThinking ? (
-                        <span className='flex items-center gap-2 text-muted-foreground'>
-                          <Loader2 className='h-3.5 w-3.5 animate-spin' />
-                          Thinking…
-                        </span>
-                      ) : (
-                        message.content
-                      )}
-                    </div>
+                      )}>
+                        <ReactMarkdown
+                          components={{
+                            code({ node, inline, className, children, ...props }) {
+                              const match = /language-(\w+)/.exec(className || '')
+                              return !inline && match ? (
+                                <SyntaxHighlighter
+                                  style={oneDark}
+                                  language={match[1]}
+                                  PreTag="div"
+                                  className="rounded-md text-xs"
+                                  {...props}
+                                >
+                                  {String(children).replace(/\n$/, '')}
+                                </SyntaxHighlighter>
+                              ) : (
+                                <code className="bg-muted px-1 py-0.5 rounded text-xs font-mono" {...props}>
+                                  {children}
+                                </code>
+                              )
+                            },
+                            p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                            ul: ({ children }) => <ul className="mb-2 ml-4 list-disc">{children}</ul>,
+                            ol: ({ children }) => <ol className="mb-2 ml-4 list-decimal">{children}</ol>,
+                            li: ({ children }) => <li className="mb-1">{children}</li>,
+                            h1: ({ children }) => <h1 className="text-lg font-bold mb-2">{children}</h1>,
+                            h2: ({ children }) => <h2 className="text-base font-bold mb-2">{children}</h2>,
+                            h3: ({ children }) => <h3 className="text-sm font-bold mb-1">{children}</h3>,
+                            strong: ({ children }) => <strong className="font-bold">{children}</strong>,
+                            em: ({ children }) => <em className="italic">{children}</em>,
+                            blockquote: ({ children }) => <blockquote className="border-l-4 border-muted pl-4 italic text-muted-foreground">{children}</blockquote>,
+                          }}
+                        >
+                          {message.content}
+                        </ReactMarkdown>
+                      </div>
+                    )}
                   </div>
                 )
               })}
             </div>
-          </ScrollArea>
+          </div>
         )}
       </div>
     </>

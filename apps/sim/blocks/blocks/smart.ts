@@ -83,6 +83,17 @@ export const SmartBlock: BlockConfig = {
       layout: 'full',
       hidden: true,
     },
+    {
+      id: 'contentMode',
+      title: 'Content Display',
+      type: 'dropdown',
+      layout: 'half',
+      hidden: true,
+      options: [
+        { label: 'Grow Block', id: 'grow' },
+        { label: 'Scroll Content', id: 'scroll' },
+      ],
+    },
   ],
   tools: AgentBlock.tools,
   inputs: AgentBlock.inputs,
