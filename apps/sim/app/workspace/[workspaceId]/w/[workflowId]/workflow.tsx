@@ -79,7 +79,7 @@ const WorkflowContent = React.memo(() => {
   // Hooks
   const params = useParams()
   const router = useRouter()
-  const { project, getNodes, fitView } = useReactFlow()
+  const { project, getNodes, setNodes, fitView } = useReactFlow()
 
   // Get workspace ID from the params
   const workspaceId = params.workspaceId as string
@@ -1323,8 +1323,18 @@ const WorkflowContent = React.memo(() => {
       // Store the original parent ID when starting to drag
       const currentParentId = node.parentId || blocks[node.id]?.data?.parentId || null
       setDragStartParentId(currentParentId)
+
+      // Ensure the dragged node is selected (and stays selected during drag)
+      const currentNodes = getNodes()
+      if (!node.selected) {
+        const updatedNodes = currentNodes.map((n) => ({
+          ...n,
+          selected: n.id === node.id,
+        }))
+        setNodes(updatedNodes)
+      }
     },
-    [blocks]
+    [blocks, getNodes, setNodes]
   )
 
   // Handle node drag stop to establish parent-child relationships
@@ -1393,10 +1403,14 @@ const WorkflowContent = React.memo(() => {
     ]
   )
 
-  // Update onPaneClick to only handle edge selection
+  // Update onPaneClick to clear all selections
   const onPaneClick = useCallback(() => {
     setSelectedEdgeInfo(null)
-  }, [])
+    // Clear node selections when clicking on pane
+    const currentNodes = getNodes()
+    const updatedNodes = currentNodes.map((n) => ({ ...n, selected: false }))
+    setNodes(updatedNodes)
+  }, [getNodes, setNodes])
 
   // Edge selection
   const onEdgeClick = useCallback(
@@ -1553,24 +1567,22 @@ const WorkflowContent = React.memo(() => {
           connectionLineType={ConnectionLineType.SmoothStep}
           onNodeClick={(e, node) => {
             e.stopPropagation()
-            // Handle node selection
-            const reactFlowInstance = project
-            if (reactFlowInstance) {
-              reactFlowInstance.setNodes((nodes) =>
-                nodes.map((n) => ({
-                  ...n,
-                  selected: n.id === node.id,
-                }))
-              )
-            }
+            setSelectedEdgeInfo(null)
+            // Handle node selection - select clicked node, keep others if using modifier keys
+            const currentNodes = getNodes()
+            const updatedNodes = currentNodes.map((n) => ({
+              ...n,
+              selected: n.id === node.id ? true : (e.ctrlKey || e.metaKey ? n.selected : false),
+            }))
+            setNodes(updatedNodes)
           }}
           onPaneClick={onPaneClick}
           onEdgeClick={onEdgeClick}
           elementsSelectable={true}
-          selectNodesOnDrag={!userPermissions.canEdit}
+          selectNodesOnDrag={false}
           nodesConnectable={userPermissions.canEdit}
           nodesDraggable={userPermissions.canEdit}
-          panOnDrag={!userPermissions.canEdit}
+          panOnDrag={true}
           draggable={false}
           noWheelClassName='allow-scroll'
           edgesFocusable={true}

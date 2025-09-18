@@ -30,7 +30,7 @@ interface WorkflowBlockProps {
 }
 
 // Combine both interfaces into a single component
-export function WorkflowBlock({ id, data }: NodeProps<WorkflowBlockProps>) {
+export function WorkflowBlock({ id, data, selected }: NodeProps<WorkflowBlockProps>) {
   const { type, config, name, isActive: dataIsActive, isPending } = data
 
   // State management
@@ -449,7 +449,7 @@ export function WorkflowBlock({ id, data }: NodeProps<WorkflowBlockProps>) {
 
   return (
     <div className='group relative'>
-      {nodeTitleDisplayMode === 'default' && (
+      {(nodeTitleDisplayMode === 'default' || nodeTitleDisplayMode === 'hidden') && (
         <div
           className={cn(
             'absolute left-0 z-30 flex items-center gap-2 px-2 font-semibold text-muted-foreground text-xs uppercase tracking-[0.08em]',
@@ -485,14 +485,17 @@ export function WorkflowBlock({ id, data }: NodeProps<WorkflowBlockProps>) {
       <Card
         ref={blockRef}
         className={cn(
-          'relative cursor-default select-none shadow-md',
+          'relative select-none shadow-md',
           'transition-block-bg transition-ring',
           'rounded-2xl border-[4px] border-border',
           isWide ? 'w-[480px]' : 'w-[320px]',
           !isEnabled && 'shadow-sm',
           isActive && 'animate-pulse-ring ring-2 ring-blue-500',
           isPending && 'ring-2 ring-amber-500',
-          'z-[20]'
+          selected && 'ring-2 ring-primary ring-offset-2',
+          'z-[20]',
+          // Make the entire card draggable when not in full title mode
+          nodeTitleDisplayMode !== 'full' && userPermissions.canEdit && 'workflow-drag-handle cursor-grab [&:active]:cursor-grabbing'
         )}
       >
         {/* Show debug indicator for pending blocks */}
@@ -507,7 +510,7 @@ export function WorkflowBlock({ id, data }: NodeProps<WorkflowBlockProps>) {
           blockType={type}
           config={config}
           blockAdvancedMode={blockAdvancedMode}
-          showTitleOptionsInToolbar={nodeTitleDisplayMode === 'default'}
+          showTitleOptionsInToolbar={nodeTitleDisplayMode === 'default' || nodeTitleDisplayMode === 'hidden'}
           shouldShowScheduleBadge={shouldShowScheduleBadge}
           scheduleInfo={scheduleInfo ?? undefined}
           onDisableSchedule={disableSchedule}
@@ -563,7 +566,10 @@ export function WorkflowBlock({ id, data }: NodeProps<WorkflowBlockProps>) {
           <div
             className='workflow-drag-handle flex cursor-grab items-center justify-between border-b p-3 [&:active]:cursor-grabbing'
             onMouseDown={(e) => {
-              e.stopPropagation()
+              // Only prevent selection when dragging is enabled
+              if (userPermissions.canEdit) {
+                e.stopPropagation()
+              }
             }}
           >
             <div className='flex min-w-0 flex-1 items-center gap-3'>
@@ -828,9 +834,6 @@ export function WorkflowBlock({ id, data }: NodeProps<WorkflowBlockProps>) {
         <div
           ref={contentRef}
           className='cursor-pointer space-y-4 px-4 pt-3 pb-4'
-          onMouseDown={(e) => {
-            e.stopPropagation()
-          }}
         >
           {subBlockRows.length > 0
             ? subBlockRows.map((row, rowIndex) => (
