@@ -61,6 +61,42 @@ function buildContextHint(systemPrompt: string | null, messages: SmartMessage[])
   return 'Ask something with the current block context and press Enter to run'
 }
 
+// Function to group messages into user-assistant pairs and show them in descending order
+function pairAndReverseMessages(messages: SmartMessage[]): SmartMessage[] {
+  // First sort all messages by timestamp to ensure correct chronological order
+  const sortedMessages = [...messages].sort((a, b) => a.timestamp - b.timestamp)
+
+  // Group into pairs (user + assistant)
+  const pairs: SmartMessage[][] = []
+
+  for (let i = 0; i < sortedMessages.length; i++) {
+    const message = sortedMessages[i]
+    if (message.role === 'user') {
+      const pair = [message]
+      // Look for the next assistant message
+      if (i + 1 < sortedMessages.length && sortedMessages[i + 1].role === 'assistant') {
+        pair.push(sortedMessages[i + 1])
+        i++ // Skip the assistant message in next iteration
+      }
+      pairs.push(pair)
+    }
+  }
+
+  // Reverse pairs to show newest first, then flatten maintaining user->assistant order
+  const result: SmartMessage[] = []
+
+  // Reverse the pairs array so newest pair comes first
+  for (let i = pairs.length - 1; i >= 0; i--) {
+    const pair = pairs[i]
+    result.push(pair[0]) // User message
+    if (pair[1]) {
+      result.push(pair[1]) // Assistant message
+    }
+  }
+
+  return result
+}
+
 export function SmartNodeContent({ blockId, isPreview, previewValues }: CustomBlockContentProps) {
   const [storedConversation, setStoredConversation] = useResolvedSubBlockValue<SmartMessage[]>(
     blockId,
@@ -87,15 +123,23 @@ export function SmartNodeContent({ blockId, isPreview, previewValues }: CustomBl
     isPreview,
     previewValues,
   })
+  const [, setMemories] = useResolvedSubBlockValue<Array<{ role: string; content: string }>>(
+    blockId,
+    'memories',
+    {
+      isPreview,
+      previewValues,
+    }
+  )
   const [, setUserPrompt] = useResolvedSubBlockValue<string>(blockId, 'userPrompt', {
     isPreview,
     previewValues,
   })
 
-  const conversation = useMemo(
-    () => (Array.isArray(storedConversation) ? storedConversation : []),
-    [storedConversation]
-  )
+  const conversation = useMemo(() => {
+    const messages = Array.isArray(storedConversation) ? storedConversation : []
+    return pairAndReverseMessages(messages)
+  }, [storedConversation])
   const conversationRef = useRef<SmartMessage[]>(conversation)
   const lastMeasuredHeight = useRef<number | null>(null)
   const modelControlId = `${blockId}-model`
@@ -125,7 +169,7 @@ export function SmartNodeContent({ blockId, isPreview, previewValues }: CustomBl
   }, [isPreview, setTemperature, temperature])
 
   const [input, setInput] = useState('')
-  const inputRef = useRef<HTMLInputElement | null>(null)
+  const inputRef = useRef<HTMLTextAreaElement | null>(null)
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [isSending, setIsSending] = useState(false)
   const { handleRunBlock, isExecuting } = useWorkflowExecution()
@@ -146,12 +190,20 @@ export function SmartNodeContent({ blockId, isPreview, previewValues }: CustomBl
   const handleClear = useCallback(() => {
     if (isPreview) return
     appendConversation([])
-  }, [appendConversation, isPreview])
+    setMemories([])
+  }, [appendConversation, isPreview, setMemories])
 
   const handleSend = useCallback(async () => {
     const trimmed = input.trim()
     if (!trimmed || disabled) return
     if (isPreview) return
+
+    const conversationHistory = (Array.isArray(storedConversation) ? storedConversation : [])
+      .filter((message) => message.content?.trim())
+      .sort((a, b) => a.timestamp - b.timestamp)
+      .map(({ role, content }) => ({ role, content }))
+
+    setMemories(conversationHistory)
 
     const userMessage: SmartMessage = {
       id: crypto.randomUUID(),
@@ -245,7 +297,17 @@ export function SmartNodeContent({ blockId, isPreview, previewValues }: CustomBl
       setIsSending(false)
       setUserPrompt('')
     }
-  }, [appendConversation, blockId, disabled, handleRunBlock, input, isPreview, setUserPrompt])
+  }, [
+    appendConversation,
+    blockId,
+    disabled,
+    handleRunBlock,
+    input,
+    isPreview,
+    setMemories,
+    setUserPrompt,
+    storedConversation,
+  ])
 
   useEffect(() => {
     if (inputRef.current && !disabled) {
@@ -296,6 +358,11 @@ export function SmartNodeContent({ blockId, isPreview, previewValues }: CustomBl
 
   return (
     <>
+      {/* Model indicator - positioned outside node on the right */}
+      <div className='absolute right-0 top-[-24px] z-30 text-[10px] text-muted-foreground/60 font-mono'>
+        {model || DEFAULT_MODEL}
+      </div>
+
       <Dialog
         open={isSettingsOpen}
         onOpenChange={(next) => {
@@ -392,16 +459,16 @@ export function SmartNodeContent({ blockId, isPreview, previewValues }: CustomBl
         </DialogContent>
       </Dialog>
 
-      <div ref={containerRef} className='flex flex-col gap-4 p-4'>
+      <div ref={containerRef} className='flex flex-col gap-4 px-1 pt-2 pb-4'>
         <div className='flex flex-col gap-2'>
           <div className='relative'>
-            <input
+            <textarea
               ref={inputRef}
-              type='text'
               value={input}
               onChange={(event) => setInput(event.target.value)}
               placeholder={contextHint}
-              className='w-full bg-transparent text-base text-foreground leading-6 placeholder:text-muted-foreground/70 focus:outline-none'
+              className='w-full bg-transparent text-[13px] font-semibold text-foreground leading-relaxed placeholder:text-muted-foreground/70 placeholder:font-normal focus:outline-none resize-none overflow-hidden'
+              rows={1}
               disabled={disabled}
               onKeyDown={(event) => {
                 if (event.key === 'Enter' && !event.shiftKey) {
@@ -416,12 +483,11 @@ export function SmartNodeContent({ blockId, isPreview, previewValues }: CustomBl
               </div>
             )}
           </div>
-          <div className='flex items-center justify-between text-[11px] text-muted-foreground/80'>
-            <span>
-              {disabled ? 'Waiting for execution to finish…' : 'Press Enter to run this block'}
-            </span>
-            <span>{model || DEFAULT_MODEL}</span>
-          </div>
+          {disabled && (
+            <div className='text-[11px] text-muted-foreground/80'>
+              <span>Waiting for execution to finish…</span>
+            </div>
+          )}
         </div>
 
         {conversation.length === 0 ? (
@@ -431,7 +497,7 @@ export function SmartNodeContent({ blockId, isPreview, previewValues }: CustomBl
           </div>
         ) : (
           <ScrollArea className='max-h-[480px] rounded-2xl'>
-            <div className='flex flex-col gap-3 pr-2'>
+            <div className='flex flex-col gap-0.5 pr-2'>
               {conversation.map((message) => {
                 const isAssistant = message.role === 'assistant'
                 const isThinking = isAssistant && !message.content.trim()
@@ -439,7 +505,7 @@ export function SmartNodeContent({ blockId, isPreview, previewValues }: CustomBl
                 return (
                   <div
                     key={message.id}
-                    className='flex flex-col gap-3 rounded-2xl bg-background/80 p-4 shadow-sm'
+                    className='flex flex-col gap-3 rounded-2xl bg-background/80 px-1 py-2 shadow-sm'
                   >
                     <div className='flex items-center gap-2 text-muted-foreground text-xs uppercase tracking-wide'>
                       <div className='flex h-6 w-6 items-center justify-center rounded-full bg-muted/50'>
@@ -454,7 +520,12 @@ export function SmartNodeContent({ blockId, isPreview, previewValues }: CustomBl
                         {new Date(message.timestamp).toLocaleTimeString()}
                       </span>
                     </div>
-                    <div className='whitespace-pre-wrap text-[13px] leading-relaxed'>
+                    <div
+                      className={cn(
+                        'whitespace-pre-wrap text-[13px] leading-relaxed',
+                        !isAssistant && 'font-semibold'
+                      )}
+                    >
                       {isThinking ? (
                         <span className='flex items-center gap-2 text-muted-foreground'>
                           <Loader2 className='h-3.5 w-3.5 animate-spin' />

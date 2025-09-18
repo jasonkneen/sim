@@ -75,6 +75,8 @@ const WorkflowContent = React.memo(() => {
   const [nestedSubflowErrors, setNestedSubflowErrors] = useState<Set<string>>(new Set())
   // Enhanced edge selection with parent context and unique identifier
   const [selectedEdgeInfo, setSelectedEdgeInfo] = useState<SelectedEdgeInfo | null>(null)
+  // Track selected nodes
+  const [selectedNodeIds, setSelectedNodeIds] = useState<Set<string>>(new Set())
 
   // Hooks
   const params = useParams()
@@ -978,6 +980,7 @@ const WorkflowContent = React.memo(() => {
         parentId: block.data?.parentId,
         dragHandle: '.workflow-drag-handle',
         extent: block.data?.extent || undefined,
+        selected: selectedNodeIds.has(block.id),
         data: {
           type: block.type,
           config: blockConfig,
@@ -992,7 +995,7 @@ const WorkflowContent = React.memo(() => {
     })
 
     return nodeArray
-  }, [blocks, activeBlockIds, pendingBlocks, isDebugModeEnabled, nestedSubflowErrors])
+  }, [blocks, activeBlockIds, pendingBlocks, isDebugModeEnabled, nestedSubflowErrors, selectedNodeIds])
 
   // Update nodes - use store version to avoid collaborative feedback loops
   const onNodesChange = useCallback(
@@ -1005,6 +1008,7 @@ const WorkflowContent = React.memo(() => {
           // React Flow position changes can be triggered by collaborative updates
           storeUpdateBlockPosition(change.id, change.position)
         }
+        // Ignore select changes as we're managing selection state ourselves
       })
     },
     [nodes, storeUpdateBlockPosition]
@@ -1324,17 +1328,12 @@ const WorkflowContent = React.memo(() => {
       const currentParentId = node.parentId || blocks[node.id]?.data?.parentId || null
       setDragStartParentId(currentParentId)
 
-      // Ensure the dragged node is selected (and stays selected during drag)
-      const currentNodes = getNodes()
-      if (!node.selected) {
-        const updatedNodes = currentNodes.map((n) => ({
-          ...n,
-          selected: n.id === node.id,
-        }))
-        setNodes(updatedNodes)
+      // Ensure the dragged node is selected in our state
+      if (!selectedNodeIds.has(node.id)) {
+        setSelectedNodeIds(new Set([node.id]))
       }
     },
-    [blocks, getNodes, setNodes]
+    [blocks, selectedNodeIds]
   )
 
   // Handle node drag stop to establish parent-child relationships
@@ -1346,14 +1345,7 @@ const WorkflowContent = React.memo(() => {
       })
       document.body.style.cursor = ''
 
-      // Preserve selection after drag - ensure the dragged node stays selected
-      const currentNodes = getNodes()
-      const updatedNodes = currentNodes.map((n) => ({
-        ...n,
-        selected: n.id === node.id ? true : n.selected,
-        position: n.id === node.id ? node.position : n.position,
-      }))
-      setNodes(updatedNodes)
+      // Selection is already preserved in our state, no need to update
 
       // Emit collaborative position update for the final position
       // This ensures other users see the smooth final position
@@ -1403,8 +1395,6 @@ const WorkflowContent = React.memo(() => {
       setPotentialParentId(null)
     },
     [
-      getNodes,
-      setNodes,
       dragStartParentId,
       potentialParentId,
       updateNodeParent,
@@ -1417,10 +1407,8 @@ const WorkflowContent = React.memo(() => {
   const onPaneClick = useCallback(() => {
     setSelectedEdgeInfo(null)
     // Clear node selections when clicking on pane
-    const currentNodes = getNodes()
-    const updatedNodes = currentNodes.map((n) => ({ ...n, selected: false }))
-    setNodes(updatedNodes)
-  }, [getNodes, setNodes])
+    setSelectedNodeIds(new Set())
+  }, [])
 
   // Edge selection
   const onEdgeClick = useCallback(
@@ -1578,13 +1566,22 @@ const WorkflowContent = React.memo(() => {
           onNodeClick={(e, node) => {
             e.stopPropagation()
             setSelectedEdgeInfo(null)
-            // Handle node selection - select clicked node, keep others if using modifier keys
-            const currentNodes = getNodes()
-            const updatedNodes = currentNodes.map((n) => ({
-              ...n,
-              selected: n.id === node.id ? true : (e.ctrlKey || e.metaKey ? n.selected : false),
-            }))
-            setNodes(updatedNodes)
+            // Handle node selection using state
+            if (e.ctrlKey || e.metaKey) {
+              // Multi-select: toggle the clicked node
+              setSelectedNodeIds(prev => {
+                const newSet = new Set(prev)
+                if (newSet.has(node.id)) {
+                  newSet.delete(node.id)
+                } else {
+                  newSet.add(node.id)
+                }
+                return newSet
+              })
+            } else {
+              // Single select: only select the clicked node
+              setSelectedNodeIds(new Set([node.id]))
+            }
           }}
           onPaneClick={onPaneClick}
           onEdgeClick={onEdgeClick}

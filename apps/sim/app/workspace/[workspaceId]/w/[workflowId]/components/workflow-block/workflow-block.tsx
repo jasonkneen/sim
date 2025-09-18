@@ -546,11 +546,11 @@ export function WorkflowBlock({ id, data, selected }: NodeProps<WorkflowBlockPro
               '!z-[30]',
               'group-hover:!shadow-[0_0_0_3px_rgba(156,163,175,0.15)]',
               horizontalHandles
-                ? 'hover:!w-[10px] hover:!left-[-10px] hover:!rounded-l-full hover:!rounded-r-none'
-                : 'hover:!h-[10px] hover:!top-[-10px] hover:!rounded-t-full hover:!rounded-b-none',
+                ? 'hover:!w-[10px] hover:!left-[-12px] hover:!rounded-l-full hover:!rounded-r-none'
+                : 'hover:!h-[10px] hover:!top-[-12px] hover:!rounded-t-full hover:!rounded-b-none',
               '!cursor-crosshair',
               'transition-[colors] duration-150',
-              horizontalHandles ? '!left-[-7px]' : '!top-[-7px]'
+              horizontalHandles ? '!left-[-9px]' : '!top-[-9px]'
             )}
             style={{
               ...(horizontalHandles
@@ -889,11 +889,11 @@ export function WorkflowBlock({ id, data, selected }: NodeProps<WorkflowBlockPro
                 '!z-[30]',
                 'group-hover:!shadow-[0_0_0_3px_rgba(156,163,175,0.15)]',
                 horizontalHandles
-                  ? 'hover:!w-[10px] hover:!right-[-10px] hover:!rounded-r-full hover:!rounded-l-none'
-                  : 'hover:!h-[10px] hover:!bottom-[-10px] hover:!rounded-b-full hover:!rounded-t-none',
+                  ? 'hover:!w-[10px] hover:!right-[-12px] hover:!rounded-r-full hover:!rounded-l-none'
+                  : 'hover:!h-[10px] hover:!bottom-[-12px] hover:!rounded-b-full hover:!rounded-t-none',
                 '!cursor-crosshair',
                 'transition-[colors] duration-150',
-                horizontalHandles ? '!right-[-7px]' : '!bottom-[-7px]'
+                horizontalHandles ? '!right-[-9px]' : '!bottom-[-9px]'
               )}
               style={{
                 ...(horizontalHandles

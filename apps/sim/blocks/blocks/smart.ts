@@ -40,6 +40,13 @@ export const SmartBlock: BlockConfig = {
       integer: false,
     },
     {
+      id: 'memories',
+      title: 'Memories',
+      type: 'short-input',
+      layout: 'full',
+      hidden: true,
+    },
+    {
       id: 'apiKey',
       title: 'API Key',
       type: 'short-input',
