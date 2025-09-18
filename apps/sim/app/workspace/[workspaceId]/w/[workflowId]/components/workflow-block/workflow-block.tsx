@@ -6,6 +6,7 @@ import { Badge, Button, Card, Tooltip, TooltipContent, TooltipTrigger } from '@/
 import { parseCronToHumanReadable } from '@/lib/schedules/utils'
 import { cn, validateName } from '@/lib/utils'
 import { useUserPermissionsContext } from '@/app/workspace/[workspaceId]/components/providers/workspace-permissions-provider'
+import { useGeneralStore } from '@/stores/settings/general/store'
 import { ActionBar } from '@/app/workspace/[workspaceId]/w/[workflowId]/components/workflow-block/components/action-bar/action-bar'
 import { ConnectionBlocks } from '@/app/workspace/[workspaceId]/w/[workflowId]/components/workflow-block/components/connection-blocks/connection-blocks'
 import { SubBlock } from '@/app/workspace/[workspaceId]/w/[workflowId]/components/workflow-block/components/sub-block/sub-block'
@@ -101,6 +102,7 @@ export function WorkflowBlock({ id, data }: NodeProps<WorkflowBlockProps>) {
   const isStarterBlock = type === 'starter'
   const isTriggerBlock = config.category === 'triggers'
   const isWebhookTriggerBlock = type === 'webhook'
+  const nodeTitleDisplayMode = useGeneralStore((state) => state.nodeTitleDisplayMode)
 
   const reactivateSchedule = async (scheduleId: string) => {
     try {
@@ -446,6 +448,34 @@ export function WorkflowBlock({ id, data }: NodeProps<WorkflowBlockProps>) {
 
   return (
     <div className='group relative'>
+      {nodeTitleDisplayMode === 'default' && (
+        <div className='absolute -top-6 left-0 z-30 flex items-center gap-2 px-2 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground'>
+          {isEditing ? (
+            <input
+              ref={nameInputRef}
+              type='text'
+              value={editedName}
+              onChange={(e) => handleNodeNameChange(e.target.value)}
+              onBlur={handleNameSubmit}
+              onKeyDown={handleNameKeyDown}
+              className='pointer-events-auto border-none bg-transparent p-0 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground outline-none'
+              maxLength={24}
+            />
+          ) : (
+            <span
+              className='pointer-events-auto cursor-text truncate max-w-[200px]'
+              onClick={(event) => {
+                event.stopPropagation()
+                setEditedName(name)
+                setIsEditing(true)
+              }}
+              title={name}
+            >
+              {name.toUpperCase()}
+            </span>
+          )}
+        </div>
+      )}
       <Card
         ref={blockRef}
         className={cn(
@@ -466,7 +496,21 @@ export function WorkflowBlock({ id, data }: NodeProps<WorkflowBlockProps>) {
           </div>
         )}
 
-        <ActionBar blockId={id} blockType={type} disabled={!userPermissions.canEdit} />
+        <ActionBar
+          blockId={id}
+          blockType={type}
+          config={config}
+          blockAdvancedMode={blockAdvancedMode}
+          showTitleOptionsInToolbar={nodeTitleDisplayMode === 'default'}
+          shouldShowScheduleBadge={shouldShowScheduleBadge}
+          scheduleInfo={scheduleInfo ?? undefined}
+          onDisableSchedule={disableSchedule}
+          onReactivateSchedule={reactivateSchedule}
+          showWebhookIndicator={showWebhookIndicator}
+          webhookInfo={webhookInfo ?? undefined}
+          isWide={isWide}
+          disabled={!userPermissions.canEdit}
+        />
         {/* Connection Blocks - show alongside node when using vertical handles */}
         {config.category !== 'triggers' && type !== 'starter' && !horizontalHandles && (
           <ConnectionBlocks
@@ -509,48 +553,49 @@ export function WorkflowBlock({ id, data }: NodeProps<WorkflowBlockProps>) {
         )}
 
         {/* Block Header */}
-        <div
-          className='workflow-drag-handle flex cursor-grab items-center justify-between border-b p-3 [&:active]:cursor-grabbing'
-          onMouseDown={(e) => {
-            e.stopPropagation()
-          }}
-        >
-          <div className='flex min-w-0 flex-1 items-center gap-3'>
-            <div
-              className='flex h-7 w-7 flex-shrink-0 items-center justify-center rounded'
-              style={{ backgroundColor: isEnabled ? config.bgColor : 'gray' }}
-            >
-              <config.icon className='h-5 w-5 text-white' />
+        {nodeTitleDisplayMode === 'full' && (
+          <div
+            className='workflow-drag-handle flex cursor-grab items-center justify-between border-b p-3 [&:active]:cursor-grabbing'
+            onMouseDown={(e) => {
+              e.stopPropagation()
+            }}
+          >
+            <div className='flex min-w-0 flex-1 items-center gap-3'>
+              <div
+                className='flex h-7 w-7 flex-shrink-0 items-center justify-center rounded'
+                style={{ backgroundColor: isEnabled ? config.bgColor : 'gray' }}
+              >
+                <config.icon className='h-5 w-5 text-white' />
+              </div>
+              <div className='min-w-0'>
+                {isEditing ? (
+                  <input
+                    ref={nameInputRef}
+                    type='text'
+                    value={editedName}
+                    onChange={(e) => handleNodeNameChange(e.target.value)}
+                    onBlur={handleNameSubmit}
+                    onKeyDown={handleNameKeyDown}
+                    className='border-none bg-transparent p-0 font-medium text-md outline-none'
+                    maxLength={18}
+                  />
+                ) : (
+                  <span
+                    className={cn(
+                      'inline-block cursor-text font-medium text-md hover:text-muted-foreground',
+                      !isEnabled && 'text-muted-foreground'
+                    )}
+                    onClick={handleNameClick}
+                    title={name}
+                    style={{
+                      maxWidth: !isEnabled ? (isWide ? '200px' : '140px') : '180px',
+                    }}
+                  >
+                    {name}
+                  </span>
+                )}
+              </div>
             </div>
-            <div className='min-w-0'>
-              {isEditing ? (
-                <input
-                  ref={nameInputRef}
-                  type='text'
-                  value={editedName}
-                  onChange={(e) => handleNodeNameChange(e.target.value)}
-                  onBlur={handleNameSubmit}
-                  onKeyDown={handleNameKeyDown}
-                  className='border-none bg-transparent p-0 font-medium text-md outline-none'
-                  maxLength={18}
-                />
-              ) : (
-                <span
-                  className={cn(
-                    'inline-block cursor-text font-medium text-md hover:text-muted-foreground',
-                    !isEnabled && 'text-muted-foreground'
-                  )}
-                  onClick={handleNameClick}
-                  title={name}
-                  style={{
-                    maxWidth: !isEnabled ? (isWide ? '200px' : '140px') : '180px',
-                  }}
-                >
-                  {name}
-                </span>
-              )}
-            </div>
-          </div>
           <div className='flex flex-shrink-0 items-center gap-2'>
             {!isEnabled && (
               <Badge variant='secondary' className='bg-gray-100 text-gray-500 hover:bg-gray-100'>
@@ -707,10 +752,8 @@ export function WorkflowBlock({ id, data }: NodeProps<WorkflowBlockProps>) {
                               <div key={key} className='mb-1'>
                                 <span className='text-muted-foreground'>{key}</span>{' '}
                                 {typeof value === 'object' && value !== null && 'type' in value ? (
-                                  // New format: { type: 'string', description: '...' }
                                   <span className='text-green-500'>{value.type}</span>
                                 ) : typeof value === 'object' && value !== null ? (
-                                  // Legacy complex object format
                                   <div className='mt-1 pl-3'>
                                     {Object.entries(value).map(([typeKey, typeValue]) => (
                                       <div key={typeKey} className='flex items-start'>
@@ -724,7 +767,6 @@ export function WorkflowBlock({ id, data }: NodeProps<WorkflowBlockProps>) {
                                     ))}
                                   </div>
                                 ) : (
-                                  // Old format: just a string
                                   <span className='text-green-500'>{value as string}</span>
                                 )}
                               </div>
@@ -771,7 +813,8 @@ export function WorkflowBlock({ id, data }: NodeProps<WorkflowBlockProps>) {
               </TooltipContent>
             </Tooltip>
           </div>
-        </div>
+          </div>
+        )}
 
         {/* Block Content */}
         <div

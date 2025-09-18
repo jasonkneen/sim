@@ -20,6 +20,7 @@ export const useGeneralStore = create<GeneralStore>()(
           isAutoPanEnabled: true,
           isConsoleExpandedByDefault: true,
           isDebugModeEnabled: false,
+          nodeTitleDisplayMode: 'full',
           theme: 'system' as const,
           telemetryEnabled: true,
           telemetryNotifiedUser: false,
@@ -29,6 +30,7 @@ export const useGeneralStore = create<GeneralStore>()(
           isAutoConnectLoading: false,
           isAutoPanLoading: false,
           isConsoleExpandedByDefaultLoading: false,
+          isNodeTitleDisplayModeLoading: false,
           isThemeLoading: false,
           isTelemetryLoading: false,
         }
@@ -94,6 +96,16 @@ export const useGeneralStore = create<GeneralStore>()(
             )
           },
 
+          setNodeTitleDisplayMode: async (mode) => {
+            if (get().isNodeTitleDisplayModeLoading) return
+            await updateSettingOptimistic(
+              'nodeTitleDisplayMode',
+              mode,
+              'isNodeTitleDisplayModeLoading',
+              'nodeTitleDisplayMode'
+            )
+          },
+
           toggleDebugMode: () => {
             set({ isDebugModeEnabled: !get().isDebugModeEnabled })
           },
@@ -155,6 +167,7 @@ export const useGeneralStore = create<GeneralStore>()(
                 isAutoConnectEnabled: data.autoConnect,
                 isAutoPanEnabled: data.autoPan ?? true, // Default to true if undefined
                 isConsoleExpandedByDefault: data.consoleExpandedByDefault ?? true, // Default to true if undefined
+                nodeTitleDisplayMode: data.nodeTitleDisplayMode ?? 'full',
                 theme: data.theme,
                 telemetryEnabled: data.telemetryEnabled,
                 telemetryNotifiedUser: data.telemetryNotifiedUser,

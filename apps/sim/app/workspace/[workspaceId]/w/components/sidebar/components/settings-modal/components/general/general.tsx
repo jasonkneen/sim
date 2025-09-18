@@ -32,6 +32,7 @@ export function General() {
 
   const isAutoPanEnabled = useGeneralStore((state) => state.isAutoPanEnabled)
   const isConsoleExpandedByDefault = useGeneralStore((state) => state.isConsoleExpandedByDefault)
+  const nodeTitleDisplayMode = useGeneralStore((state) => state.nodeTitleDisplayMode)
 
   // Loading states
   const isAutoConnectLoading = useGeneralStore((state) => state.isAutoConnectLoading)
@@ -39,6 +40,9 @@ export function General() {
   const isAutoPanLoading = useGeneralStore((state) => state.isAutoPanLoading)
   const isConsoleExpandedByDefaultLoading = useGeneralStore(
     (state) => state.isConsoleExpandedByDefaultLoading
+  )
+  const isNodeTitleDisplayModeLoading = useGeneralStore(
+    (state) => state.isNodeTitleDisplayModeLoading
   )
   const isThemeLoading = useGeneralStore((state) => state.isThemeLoading)
 
@@ -49,6 +53,7 @@ export function General() {
   const toggleConsoleExpandedByDefault = useGeneralStore(
     (state) => state.toggleConsoleExpandedByDefault
   )
+  const setNodeTitleDisplayMode = useGeneralStore((state) => state.setNodeTitleDisplayMode)
   const loadSettings = useGeneralStore((state) => state.loadSettings)
 
   useEffect(() => {
@@ -182,13 +187,35 @@ export function General() {
                       <p className='text-sm'>{TOOLTIPS.consoleExpandedByDefault}</p>
                     </TooltipContent>
                   </Tooltip>
+              </div>
+              <Switch
+                id='console-expanded-by-default'
+                checked={isConsoleExpandedByDefault}
+                onCheckedChange={handleConsoleExpandedByDefaultChange}
+                disabled={isLoading || isConsoleExpandedByDefaultLoading}
+              />
+            </div>
+
+              <div className='flex items-center justify-between py-1'>
+                <div className='flex flex-col gap-1'>
+                  <Label htmlFor='node-title-display-mode' className='font-medium'>
+                    Node title display
+                  </Label>
+                  <p className='text-muted-foreground text-xs'>Toggle between titles inside the node or outside (top-left) while staying editable.</p>
                 </div>
-                <Switch
-                  id='console-expanded-by-default'
-                  checked={isConsoleExpandedByDefault}
-                  onCheckedChange={handleConsoleExpandedByDefaultChange}
-                  disabled={isLoading || isConsoleExpandedByDefaultLoading}
-                />
+                <Select
+                  value={nodeTitleDisplayMode}
+                  onValueChange={(value: 'default' | 'full') => setNodeTitleDisplayMode(value)}
+                  disabled={isLoading || isNodeTitleDisplayModeLoading}
+                >
+                  <SelectTrigger id='node-title-display-mode' className='w-[200px]'>
+                    <SelectValue placeholder='Select behaviour' className='capitalize' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value='default'>Default (title outside)</SelectItem>
+                    <SelectItem value='full'>Full (title inside)</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </>
           )}
