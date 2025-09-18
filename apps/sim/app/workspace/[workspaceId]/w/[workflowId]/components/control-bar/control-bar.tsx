@@ -86,7 +86,7 @@ export function ControlBar({ hasValidationErrors = false }: ControlBarProps) {
   const { setActiveTab, togglePanel, isOpen } = usePanelStore()
   const { getFolderTree, expandedFolders } = useFolderStore()
 
-  const iconButtonBase = 'inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-card/90 text-card-foreground shadow-sm transition-colors'
+  const iconButtonBase = 'inline-flex h-8 w-8 items-center justify-center rounded-2xl bg-card/90 text-card-foreground shadow-sm transition-colors'
 
   // User permissions - use stable activeWorkspaceId from registry instead of deriving from currentWorkflow
   const userPermissions = useUserPermissionsContext()
@@ -646,7 +646,7 @@ export function ControlBar({ hasValidationErrors = false }: ControlBarProps) {
     const isControlDisabled = pendingCount === 0
 
     const debugButtonClass = cn(
-      'h-10 w-10 rounded-2xl font-medium',
+      'h-8 w-8 rounded-2xl font-medium',
       'bg-[#701FFC] hover:bg-[#6518E6]',
       'shadow-[0_0_0_0_#701FFC] hover:shadow-[0_0_0_4px_rgba(127,47,255,0.15)]',
       'text-white transition-all duration-200',
@@ -812,13 +812,13 @@ export function ControlBar({ hasValidationErrors = false }: ControlBarProps) {
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
-              className={cn(
-                'gap-2 font-medium',
-                'bg-red-500 hover:bg-red-600',
-                'shadow-[0_0_0_0_#ef4444] hover:shadow-[0_0_0_4px_rgba(239,68,68,0.15)]',
-                'text-white transition-all duration-200',
-                'h-10 rounded-2xl px-4'
-              )}
+            className={cn(
+              'gap-2 font-medium',
+              'bg-red-500 hover:bg-red-600',
+              'shadow-[0_0_0_0_#ef4444] hover:shadow-[0_0_0_4px_rgba(239,68,68,0.15)]',
+              'text-white transition-all duration-200',
+              'h-8 rounded-2xl px-3'
+            )}
               onClick={handleCancelExecution}
             >
               <X className={cn('h-3.5 w-3.5')} />
@@ -881,7 +881,7 @@ export function ControlBar({ hasValidationErrors = false }: ControlBarProps) {
               'shadow-[0_0_0_0_#701FFC] hover:shadow-[0_0_0_4px_rgba(127,47,255,0.15)]',
               'text-white transition-all duration-200',
               'disabled:opacity-50 disabled:hover:bg-[#701FFC] disabled:hover:shadow-none',
-              'h-10 rounded-2xl px-4'
+              'h-8 rounded-2xl px-3'
             )}
             onClick={handleRunClick}
             disabled={isButtonDisabled}
@@ -980,7 +980,7 @@ export function ControlBar({ hasValidationErrors = false }: ControlBarProps) {
 
   return (
     <div className='fixed top-4 left-1/2 z-30 -translate-x-1/2'>
-      <div className='flex items-center gap-2 rounded-full bg-card/95 px-5 py-2 shadow-lg backdrop-blur-sm'>
+      <div className='flex items-center gap-1.5 rounded-full bg-card/95 px-3 py-1.25 shadow-lg backdrop-blur-sm'>
         {renderDisconnectionNotice()}
         <ExportControls />
         {renderYamlEditorButton()}
