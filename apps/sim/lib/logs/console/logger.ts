@@ -63,11 +63,19 @@ const config = LOG_CONFIG[ENV] || LOG_CONFIG.development
 const formatObject = (obj: any): string => {
   try {
     if (obj instanceof Error) {
+      // Properly serialize Error objects by extracting their properties
       return JSON.stringify(
         {
           message: obj.message,
+          name: obj.name,
           stack: ENV === 'development' ? obj.stack : undefined,
-          ...(obj as any),
+          // Only include additional properties if they exist
+          ...Object.getOwnPropertyNames(obj).reduce((acc, key) => {
+            if (key !== 'message' && key !== 'name' && key !== 'stack') {
+              acc[key] = (obj as any)[key]
+            }
+            return acc
+          }, {} as Record<string, any>),
         },
         null,
         ENV === 'development' ? 2 : 0

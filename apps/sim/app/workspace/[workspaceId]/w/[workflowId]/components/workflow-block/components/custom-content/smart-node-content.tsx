@@ -459,7 +459,7 @@ export function SmartNodeContent({ blockId, isPreview, previewValues }: CustomBl
         </DialogContent>
       </Dialog>
 
-      <div ref={containerRef} className='flex flex-col gap-4 px-1 pt-2 pb-4'>
+      <div ref={containerRef} className='flex flex-col gap-2 px-1 pt-1 pb-2'>
         <div className='flex flex-col gap-2'>
           <div className='relative'>
             <textarea

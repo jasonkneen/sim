@@ -35,9 +35,10 @@ export const useEnvironmentStore = create<EnvironmentStore>()((set, get) => ({
         })
       }
     } catch (error) {
-      logger.error('Error loading environment variables:', { error })
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      logger.error('Error loading environment variables:', errorMessage)
       set({
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: errorMessage,
         isLoading: false,
       })
     }
@@ -83,9 +84,10 @@ export const useEnvironmentStore = create<EnvironmentStore>()((set, get) => ({
 
       set({ isLoading: false })
     } catch (error) {
-      logger.error('Error saving environment variables:', { error })
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      logger.error('Error saving environment variables:', errorMessage)
       set({
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: errorMessage,
         isLoading: false,
       })
 
