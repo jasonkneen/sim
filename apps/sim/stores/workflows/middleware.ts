@@ -25,7 +25,7 @@ interface HistoryActions {
 }
 
 // MAX for each individual workflow
-const MAX_HISTORY_LENGTH = 20
+const MAX_HISTORY_LENGTH = 50
 
 // Default empty state for consistent initialization
 const EMPTY_WORKFLOW_STATE = {

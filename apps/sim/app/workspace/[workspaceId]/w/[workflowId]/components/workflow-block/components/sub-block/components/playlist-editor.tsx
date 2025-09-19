@@ -26,22 +26,22 @@ export function PlaylistEditor({
 }: PlaylistEditorProps) {
   const [storedPlaylist] = useSubBlockValue<PlaylistTrackForm[]>(blockId, subBlockId)
   const playlist = useMemo(() => {
-    const source = isPreview ? previewValue ?? [] : storedPlaylist ?? []
+    const source = isPreview ? (previewValue ?? []) : (storedPlaylist ?? [])
     return source.map((track) => ({
       ...track,
       id: track.id || crypto.randomUUID(),
     }))
   }, [isPreview, previewValue, storedPlaylist])
 
-  const validTracks = playlist.filter(track => track.url)
+  const validTracks = playlist.filter((track) => track.url)
 
   if (playlist.length === 0) {
     return (
       <div className='flex items-center justify-center rounded-md border border-border/60 border-dashed bg-card/40 p-6'>
         <div className='text-center'>
-          <Volume2 className='h-8 w-8 text-muted-foreground mx-auto mb-2' />
+          <Volume2 className='mx-auto mb-2 h-8 w-8 text-muted-foreground' />
           <p className='text-muted-foreground text-sm'>No tracks in playlist</p>
-          <p className='text-muted-foreground text-xs mt-1'>
+          <p className='mt-1 text-muted-foreground text-xs'>
             Use the audio player interface to add tracks
           </p>
         </div>
@@ -51,36 +51,28 @@ export function PlaylistEditor({
 
   return (
     <div className='rounded-md border border-border/60 bg-card/40 p-3'>
-      <div className='flex items-center gap-2 mb-3'>
+      <div className='mb-3 flex items-center gap-2'>
         <Music2 className='h-4 w-4 text-muted-foreground' />
-        <span className='text-sm font-medium'>
+        <span className='font-medium text-sm'>
           {playlist.length} track{playlist.length !== 1 ? 's' : ''}
           {validTracks.length !== playlist.length && (
-            <span className='text-muted-foreground'>
-              ({validTracks.length} with URLs)
-            </span>
+            <span className='text-muted-foreground'>({validTracks.length} with URLs)</span>
           )}
         </span>
       </div>
 
-      <div className='space-y-1 max-h-32 overflow-y-auto'>
+      <div className='max-h-32 space-y-1 overflow-y-auto'>
         {playlist.map((track, index) => (
-          <div key={track.id} className='flex items-center gap-2 p-2 rounded bg-background/60'>
-            <span className='text-xs text-muted-foreground w-6'>{index + 1}</span>
+          <div key={track.id} className='flex items-center gap-2 rounded bg-background/60 p-2'>
+            <span className='w-6 text-muted-foreground text-xs'>{index + 1}</span>
             <div className='min-w-0 flex-1'>
-              <p className='text-sm font-medium truncate'>
-                {track.title || `Track ${index + 1}`}
-              </p>
+              <p className='truncate font-medium text-sm'>{track.title || `Track ${index + 1}`}</p>
               {track.artist && (
-                <p className='text-xs text-muted-foreground truncate'>
-                  {track.artist}
-                </p>
+                <p className='truncate text-muted-foreground text-xs'>{track.artist}</p>
               )}
             </div>
             {!track.url && (
-              <span className='text-xs text-amber-600 bg-amber-50 px-1 rounded'>
-                No URL
-              </span>
+              <span className='rounded bg-amber-50 px-1 text-amber-600 text-xs'>No URL</span>
             )}
           </div>
         ))}

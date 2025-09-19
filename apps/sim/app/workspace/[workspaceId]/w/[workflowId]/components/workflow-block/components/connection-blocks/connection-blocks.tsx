@@ -1,4 +1,4 @@
-import type { CSSProperties, ComponentType } from 'react'
+import type { ComponentType, CSSProperties } from 'react'
 import { RepeatIcon, SplitIcon } from 'lucide-react'
 import {
   type ConnectedBlock,
@@ -79,7 +79,7 @@ export function ConnectionBlocks({
     const displayName = connection.name // Use the actual block name instead of transforming it
 
     // Handle special blocks that aren't in the registry (loop and parallel)
-    let Icon = blockConfig?.icon
+    const Icon = blockConfig?.icon
     const accentColor = blockConfig?.bgColor || '#6B7280'
 
     if (!blockConfig) {
@@ -108,8 +108,7 @@ export function ConnectionBlocks({
     const baseClasses =
       'group inline-flex w-max items-center gap-1 rounded-full border bg-card/60 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.04em] text-white'
 
-    const enabledClasses =
-      'cursor-grab transition-transform active:cursor-grabbing'
+    const enabledClasses = 'cursor-grab transition-transform active:cursor-grabbing'
     const disabledClasses = 'cursor-not-allowed opacity-50'
 
     return (
@@ -129,9 +128,7 @@ export function ConnectionBlocks({
             <IconComponent className='h-2.5 w-2.5 text-white' />
           </div>
         )}
-        <span className='leading-none text-white'>
-          {displayName.toUpperCase()}
-        </span>
+        <span className='text-white leading-none'>{displayName.toUpperCase()}</span>
       </div>
     )
   }

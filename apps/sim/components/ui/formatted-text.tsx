@@ -26,30 +26,32 @@ export function formatDisplayText(text: string, stripQuotes = false): ReactNode[
   // Split the text by both tag patterns <something.something> and {{ENV_VAR}}
   const parts = processedText.split(/(<[^>]+>|\{\{[^}]+\}\})/g)
 
-  return parts.map((part, index) => {
-    // Guard against undefined or null parts
-    if (!part) {
-      return null
-    }
+  return parts
+    .map((part, index) => {
+      // Guard against undefined or null parts
+      if (!part) {
+        return null
+      }
 
-    // Handle block references
-    if (part.startsWith('<') && part.endsWith('>')) {
-      return (
-        <span key={index} className='text-blue-500'>
-          {part}
-        </span>
-      )
-    }
+      // Handle block references
+      if (part.startsWith('<') && part.endsWith('>')) {
+        return (
+          <span key={index} className='text-blue-500'>
+            {part}
+          </span>
+        )
+      }
 
-    // Handle environment variables
-    if (part.match(/^\{\{[^}]+\}\}$/)) {
-      return (
-        <span key={index} className='text-blue-500'>
-          {part}
-        </span>
-      )
-    }
+      // Handle environment variables
+      if (part.match(/^\{\{[^}]+\}\}$/)) {
+        return (
+          <span key={index} className='text-blue-500'>
+            {part}
+          </span>
+        )
+      }
 
-    return <span key={index}>{part}</span>
-  }).filter(Boolean)
+      return <span key={index}>{part}</span>
+    })
+    .filter(Boolean)
 }

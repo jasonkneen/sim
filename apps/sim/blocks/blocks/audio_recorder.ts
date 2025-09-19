@@ -83,7 +83,10 @@ export const AudioRecorderBlock: BlockConfig<AudioRecorderToolResponse> = {
     recordings: { type: 'json', description: 'Existing recording metadata' },
   },
   outputs: {
-    success: { type: 'boolean', description: 'Whether the audio recording operation was successful' },
+    success: {
+      type: 'boolean',
+      description: 'Whether the audio recording operation was successful',
+    },
     output: { type: 'json', description: 'The structured output containing recording data' },
     error: { type: 'string', description: 'Error message if operation failed' },
     timing: { type: 'json', description: 'Execution timing information' },

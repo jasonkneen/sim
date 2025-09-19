@@ -1,12 +1,7 @@
+import { nanoid } from 'nanoid'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { nanoid } from 'nanoid'
-import {
-  type MCPServersStore,
-  type MCPServer,
-  type MCPTool,
-  DEFAULT_MCP_SERVERS
-} from './types'
+import { DEFAULT_MCP_SERVERS, type MCPServer, type MCPServersStore, type MCPTool } from './types'
 
 const generateId = () => nanoid()
 
@@ -31,13 +26,13 @@ export const useMCPServersStore = create<MCPServersStore>()(
             status: 'disconnected',
             tools: [],
             createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
+            updatedAt: new Date().toISOString(),
           }
 
           set((state) => ({
             ...state,
             servers: [...state.servers, server],
-            isLoading: false
+            isLoading: false,
           }))
 
           // Auto-connect if server is enabled
@@ -48,7 +43,7 @@ export const useMCPServersStore = create<MCPServersStore>()(
           set((state) => ({
             ...state,
             error: error instanceof Error ? error.message : 'Failed to add server',
-            isLoading: false
+            isLoading: false,
           }))
         }
       },
@@ -58,7 +53,7 @@ export const useMCPServersStore = create<MCPServersStore>()(
           set((state) => ({
             ...state,
             isServerLoading: { ...state.isServerLoading, [id]: true },
-            error: null
+            error: null,
           }))
 
           set((state) => ({
@@ -68,7 +63,7 @@ export const useMCPServersStore = create<MCPServersStore>()(
                 ? { ...server, ...updates, updatedAt: new Date().toISOString() }
                 : server
             ),
-            isServerLoading: { ...state.isServerLoading, [id]: false }
+            isServerLoading: { ...state.isServerLoading, [id]: false },
           }))
 
           // Handle connection state changes
@@ -83,7 +78,7 @@ export const useMCPServersStore = create<MCPServersStore>()(
           set((state) => ({
             ...state,
             error: error instanceof Error ? error.message : 'Failed to update server',
-            isServerLoading: { ...state.isServerLoading, [id]: false }
+            isServerLoading: { ...state.isServerLoading, [id]: false },
           }))
         }
       },
@@ -101,13 +96,13 @@ export const useMCPServersStore = create<MCPServersStore>()(
             connectionStatus: Object.fromEntries(
               Object.entries(state.connectionStatus).filter(([key]) => key !== id)
             ),
-            isLoading: false
+            isLoading: false,
           }))
         } catch (error) {
           set((state) => ({
             ...state,
             error: error instanceof Error ? error.message : 'Failed to delete server',
-            isLoading: false
+            isLoading: false,
           }))
         }
       },
@@ -125,7 +120,7 @@ export const useMCPServersStore = create<MCPServersStore>()(
           set((state) => ({
             ...state,
             connectionStatus: { ...state.connectionStatus, [id]: 'connecting' },
-            error: null
+            error: null,
           }))
 
           // TODO: Implement actual MCP server connection
@@ -133,7 +128,7 @@ export const useMCPServersStore = create<MCPServersStore>()(
           console.log(`Connecting to MCP server: ${id}`)
 
           // Simulate connection
-          await new Promise(resolve => setTimeout(resolve, 1000))
+          await new Promise((resolve) => setTimeout(resolve, 1000))
 
           set((state) => ({
             ...state,
@@ -142,11 +137,11 @@ export const useMCPServersStore = create<MCPServersStore>()(
                 ? {
                     ...server,
                     status: 'connected',
-                    lastConnected: new Date().toISOString()
+                    lastConnected: new Date().toISOString(),
                   }
                 : server
             ),
-            connectionStatus: { ...state.connectionStatus, [id]: 'connected' }
+            connectionStatus: { ...state.connectionStatus, [id]: 'connected' },
           }))
 
           // Refresh tools after connection
@@ -159,12 +154,12 @@ export const useMCPServersStore = create<MCPServersStore>()(
                 ? {
                     ...server,
                     status: 'error',
-                    lastError: error instanceof Error ? error.message : 'Connection failed'
+                    lastError: error instanceof Error ? error.message : 'Connection failed',
                   }
                 : server
             ),
             connectionStatus: { ...state.connectionStatus, [id]: 'error' },
-            error: error instanceof Error ? error.message : 'Failed to connect to server'
+            error: error instanceof Error ? error.message : 'Failed to connect to server',
           }))
         }
       },
@@ -177,16 +172,14 @@ export const useMCPServersStore = create<MCPServersStore>()(
           set((state) => ({
             ...state,
             servers: state.servers.map((server) =>
-              server.id === id
-                ? { ...server, status: 'disconnected', tools: [] }
-                : server
+              server.id === id ? { ...server, status: 'disconnected', tools: [] } : server
             ),
-            connectionStatus: { ...state.connectionStatus, [id]: 'disconnected' }
+            connectionStatus: { ...state.connectionStatus, [id]: 'disconnected' },
           }))
         } catch (error) {
           set((state) => ({
             ...state,
-            error: error instanceof Error ? error.message : 'Failed to disconnect from server'
+            error: error instanceof Error ? error.message : 'Failed to disconnect from server',
           }))
         }
       },
@@ -200,7 +193,7 @@ export const useMCPServersStore = create<MCPServersStore>()(
           console.log(`Testing connection to MCP server: ${id}`)
 
           // Simulate test
-          await new Promise(resolve => setTimeout(resolve, 500))
+          await new Promise((resolve) => setTimeout(resolve, 500))
           return true
         } catch (error) {
           console.error(`Connection test failed for server ${id}:`, error)
@@ -212,7 +205,7 @@ export const useMCPServersStore = create<MCPServersStore>()(
         try {
           set((state) => ({
             ...state,
-            isServerLoading: { ...state.isServerLoading, [id]: true }
+            isServerLoading: { ...state.isServerLoading, [id]: true },
           }))
 
           // TODO: Implement actual tool discovery
@@ -227,10 +220,10 @@ export const useMCPServersStore = create<MCPServersStore>()(
               schema: {
                 type: 'object',
                 properties: {
-                  path: { type: 'string', description: 'Directory path' }
+                  path: { type: 'string', description: 'Directory path' },
                 },
-                required: ['path']
-              }
+                required: ['path'],
+              },
             },
             {
               name: 'read_file',
@@ -238,27 +231,25 @@ export const useMCPServersStore = create<MCPServersStore>()(
               schema: {
                 type: 'object',
                 properties: {
-                  path: { type: 'string', description: 'File path' }
+                  path: { type: 'string', description: 'File path' },
                 },
-                required: ['path']
-              }
-            }
+                required: ['path'],
+              },
+            },
           ]
 
           set((state) => ({
             ...state,
             servers: state.servers.map((server) =>
-              server.id === id
-                ? { ...server, tools: mockTools }
-                : server
+              server.id === id ? { ...server, tools: mockTools } : server
             ),
-            isServerLoading: { ...state.isServerLoading, [id]: false }
+            isServerLoading: { ...state.isServerLoading, [id]: false },
           }))
         } catch (error) {
           set((state) => ({
             ...state,
             error: error instanceof Error ? error.message : 'Failed to refresh tools',
-            isServerLoading: { ...state.isServerLoading, [id]: false }
+            isServerLoading: { ...state.isServerLoading, [id]: false },
           }))
         }
       },
@@ -274,19 +265,19 @@ export const useMCPServersStore = create<MCPServersStore>()(
 
           // Initialize with default servers if none exist
           if (servers.length === 0) {
-            const defaultServers: MCPServer[] = DEFAULT_MCP_SERVERS.map(server => ({
+            const defaultServers: MCPServer[] = DEFAULT_MCP_SERVERS.map((server) => ({
               ...server,
               id: generateId(),
               status: 'disconnected' as const,
               tools: [],
               createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString()
+              updatedAt: new Date().toISOString(),
             }))
 
             set((state) => ({
               ...state,
               servers: defaultServers,
-              isLoading: false
+              isLoading: false,
             }))
           } else {
             set((state) => ({ ...state, isLoading: false }))
@@ -295,7 +286,7 @@ export const useMCPServersStore = create<MCPServersStore>()(
           set((state) => ({
             ...state,
             error: error instanceof Error ? error.message : 'Failed to load servers',
-            isLoading: false
+            isLoading: false,
           }))
         }
       },
@@ -321,20 +312,22 @@ export const useMCPServersStore = create<MCPServersStore>()(
       getAllTools: () => {
         const tools: { server: MCPServer; tool: MCPTool }[] = []
 
-        get().getConnectedServers().forEach(server => {
-          server.tools.forEach(tool => {
-            tools.push({ server, tool })
+        get()
+          .getConnectedServers()
+          .forEach((server) => {
+            server.tools.forEach((tool) => {
+              tools.push({ server, tool })
+            })
           })
-        })
 
         return tools
-      }
+      },
     }),
     {
       name: 'mcp-servers-store',
       partialize: (state) => ({
-        servers: state.servers
-      })
+        servers: state.servers,
+      }),
     }
   )
 )

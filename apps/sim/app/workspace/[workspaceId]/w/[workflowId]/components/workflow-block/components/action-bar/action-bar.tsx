@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { useUserPermissionsContext } from '@/app/workspace/[workspaceId]/components/providers/workspace-permissions-provider'
+import { useDeviceSettingsStore } from '@/app/workspace/[workspaceId]/w/[workflowId]/components/workflow-block/components/custom-content/use-device-settings'
 import { useSmartNodeSettingsStore } from '@/app/workspace/[workspaceId]/w/[workflowId]/components/workflow-block/components/custom-content/use-smart-node-settings'
 import { useWorkflowExecution } from '@/app/workspace/[workspaceId]/w/[workflowId]/hooks/use-workflow-execution'
 import type { BlockConfig } from '@/blocks/types'
@@ -82,6 +83,7 @@ export function ActionBar({
   const isStarterBlock = blockType === 'starter'
   const isTriggerBlock = config.category === 'triggers'
   const { open } = useSmartNodeSettingsStore()
+  const openDeviceSettings = useDeviceSettingsStore((state) => state.open)
 
   const getTooltipMessage = (defaultMessage: string) => {
     if (disabled) {
@@ -164,6 +166,30 @@ export function ActionBar({
             </Button>
           </TooltipTrigger>
           <TooltipContent side='right'>{getTooltipMessage('Smart node settings')}</TooltipContent>
+        </Tooltip>
+      )}
+
+      {(blockType === 'camera' || blockType === 'microphone') && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant='ghost'
+              size='sm'
+              onClick={(event) => {
+                event.stopPropagation()
+                if (!disabled) {
+                  openDeviceSettings(blockId, blockType as 'camera' | 'microphone')
+                }
+              }}
+              className={cn('h-7 w-7 shrink-0 p-0 text-gray-500', disabled && 'opacity-50')}
+              disabled={disabled}
+            >
+              <Settings2 className='h-4 w-4' />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side='right'>
+            {getTooltipMessage(blockType === 'camera' ? 'Camera settings' : 'Microphone settings')}
+          </TooltipContent>
         </Tooltip>
       )}
 
@@ -321,7 +347,7 @@ export function ActionBar({
               </Button>
             </TooltipTrigger>
             <TooltipContent side='right'>
-              {getTooltipMessage(isWide ? 'Narrow Block' : 'Expand Block')}
+              {getTooltipMessage(isWide ? 'Compact Block' : 'Expand Block')}
             </TooltipContent>
           </Tooltip>
 

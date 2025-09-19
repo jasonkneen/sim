@@ -1,6 +1,11 @@
 export type ProviderType = 'openai' | 'anthropic' | 'google' | 'groq' | 'local' | 'custom'
 
-export type ModelCapability = 'text' | 'vision' | 'image-generation' | 'function-calling' | 'reasoning'
+export type ModelCapability =
+  | 'text'
+  | 'vision'
+  | 'image-generation'
+  | 'function-calling'
+  | 'reasoning'
 
 export type ModelPreset = 'thinking' | 'image-generation' | 'vision' | 'coding' | 'general'
 
@@ -87,7 +92,7 @@ export const DEFAULT_PROVIDERS: Omit<Provider, 'id' | 'createdAt' | 'updatedAt'>
     enabled: false,
     apiKeyEnvVar: 'OPENAI_API_KEY',
     baseUrl: 'https://api.openai.com/v1',
-    models: []
+    models: [],
   },
   {
     name: 'Anthropic',
@@ -95,7 +100,7 @@ export const DEFAULT_PROVIDERS: Omit<Provider, 'id' | 'createdAt' | 'updatedAt'>
     enabled: false,
     apiKeyEnvVar: 'ANTHROPIC_API_KEY',
     baseUrl: 'https://api.anthropic.com',
-    models: []
+    models: [],
   },
   {
     name: 'Google AI',
@@ -103,7 +108,7 @@ export const DEFAULT_PROVIDERS: Omit<Provider, 'id' | 'createdAt' | 'updatedAt'>
     enabled: false,
     apiKeyEnvVar: 'GOOGLE_AI_API_KEY',
     baseUrl: 'https://generativelanguage.googleapis.com',
-    models: []
+    models: [],
   },
   {
     name: 'Groq',
@@ -111,8 +116,8 @@ export const DEFAULT_PROVIDERS: Omit<Provider, 'id' | 'createdAt' | 'updatedAt'>
     enabled: false,
     apiKeyEnvVar: 'GROQ_API_KEY',
     baseUrl: 'https://api.groq.com/openai/v1',
-    models: []
-  }
+    models: [],
+  },
 ]
 
 // Default model preset configurations
@@ -123,7 +128,7 @@ export const DEFAULT_PRESET_CONFIGS: ModelPresetConfig[] = [
     description: 'Models optimized for complex reasoning and problem-solving',
     icon: '🧠',
     defaultModels: ['o1-preview', 'claude-3-5-sonnet'],
-    requiredCapabilities: ['text', 'reasoning']
+    requiredCapabilities: ['text', 'reasoning'],
   },
   {
     preset: 'image-generation',
@@ -131,7 +136,7 @@ export const DEFAULT_PRESET_CONFIGS: ModelPresetConfig[] = [
     description: 'Models capable of generating images from text prompts',
     icon: '🎨',
     defaultModels: ['dall-e-3', 'dall-e-2'],
-    requiredCapabilities: ['image-generation']
+    requiredCapabilities: ['image-generation'],
   },
   {
     preset: 'vision',
@@ -139,7 +144,7 @@ export const DEFAULT_PRESET_CONFIGS: ModelPresetConfig[] = [
     description: 'Models that can understand and analyze images',
     icon: '👁️',
     defaultModels: ['gpt-4o', 'claude-3-5-sonnet', 'gemini-1.5-pro'],
-    requiredCapabilities: ['text', 'vision']
+    requiredCapabilities: ['text', 'vision'],
   },
   {
     preset: 'coding',
@@ -147,7 +152,7 @@ export const DEFAULT_PRESET_CONFIGS: ModelPresetConfig[] = [
     description: 'Models optimized for coding and software development',
     icon: '💻',
     defaultModels: ['gpt-4o', 'claude-3-5-sonnet', 'deepseek-coder'],
-    requiredCapabilities: ['text', 'function-calling']
+    requiredCapabilities: ['text', 'function-calling'],
   },
   {
     preset: 'general',
@@ -155,6 +160,6 @@ export const DEFAULT_PRESET_CONFIGS: ModelPresetConfig[] = [
     description: 'Well-rounded models for general tasks and conversations',
     icon: '⚡',
     defaultModels: ['gpt-4o-mini', 'claude-3-haiku', 'gemma-2-9b'],
-    requiredCapabilities: ['text']
-  }
+    requiredCapabilities: ['text'],
+  },
 ]

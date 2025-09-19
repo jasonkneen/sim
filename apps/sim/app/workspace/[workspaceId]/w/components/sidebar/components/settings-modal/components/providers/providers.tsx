@@ -1,7 +1,16 @@
 import { useEffect, useState } from 'react'
-import { AlertTriangle, Plus, Settings, Eye, EyeOff, Trash2, Server, Key } from 'lucide-react'
+import { AlertTriangle, Eye, EyeOff, Key, Plus, Server, Settings, Trash2 } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -11,21 +20,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
-import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
 import { useProvidersStore } from '@/stores/settings/providers/store'
-import { type ProviderType, type Provider } from '@/stores/settings/providers/types'
+import type { Provider, ProviderType } from '@/stores/settings/providers/types'
 
 const PROVIDER_TYPES: { value: ProviderType; label: string; description: string }[] = [
   { value: 'openai', label: 'OpenAI', description: 'ChatGPT, GPT-4, DALL-E' },
@@ -62,9 +62,9 @@ export function Providers() {
   }
 
   const toggleApiKeyVisibility = (providerId: string) => {
-    setShowApiKeys(prev => ({
+    setShowApiKeys((prev) => ({
       ...prev,
-      [providerId]: !prev[providerId]
+      [providerId]: !prev[providerId],
     }))
   }
 
@@ -99,7 +99,7 @@ export function Providers() {
       <div className='flex items-center justify-between'>
         <div>
           <h2 className='font-medium text-lg'>AI Providers</h2>
-          <p className='text-muted-foreground text-sm mt-1'>
+          <p className='mt-1 text-muted-foreground text-sm'>
             Configure AI model providers and API keys
           </p>
         </div>
@@ -118,14 +118,14 @@ export function Providers() {
             <ProviderSkeleton />
           </>
         ) : providers.length === 0 ? (
-          <div className='text-center py-8'>
-            <Server className='h-12 w-12 text-muted-foreground mx-auto mb-4' />
-            <h3 className='text-lg font-medium'>No providers configured</h3>
-            <p className='text-muted-foreground mb-4'>
+          <div className='py-8 text-center'>
+            <Server className='mx-auto mb-4 h-12 w-12 text-muted-foreground' />
+            <h3 className='font-medium text-lg'>No providers configured</h3>
+            <p className='mb-4 text-muted-foreground'>
               Add AI providers to start using models in your workflows
             </p>
             <Button onClick={() => setShowAddDialog(true)}>
-              <Plus className='h-4 w-4 mr-2' />
+              <Plus className='mr-2 h-4 w-4' />
               Add Provider
             </Button>
           </div>
@@ -174,10 +174,10 @@ function ProviderCard({
     onUpdateApiKey(value)
   }
 
-  const providerType = PROVIDER_TYPES.find(type => type.value === provider.type)
+  const providerType = PROVIDER_TYPES.find((type) => type.value === provider.type)
 
   return (
-    <div className='border rounded-lg p-4 space-y-4'>
+    <div className='space-y-4 rounded-lg border p-4'>
       <div className='flex items-center justify-between'>
         <div className='flex items-center gap-3'>
           <div className='flex flex-col'>
@@ -185,14 +185,12 @@ function ProviderCard({
               <h3 className='font-medium'>{provider.name}</h3>
               <Badge variant='secondary'>{providerType?.label}</Badge>
               {provider.enabled && (
-                <Badge variant='outline' className='text-green-600 border-green-600'>
+                <Badge variant='outline' className='border-green-600 text-green-600'>
                   Active
                 </Badge>
               )}
             </div>
-            <p className='text-muted-foreground text-sm'>
-              {providerType?.description}
-            </p>
+            <p className='text-muted-foreground text-sm'>{providerType?.description}</p>
           </div>
         </div>
         <div className='flex items-center gap-2'>
@@ -209,11 +207,7 @@ function ProviderCard({
             </TooltipTrigger>
             <TooltipContent>Delete provider</TooltipContent>
           </Tooltip>
-          <Switch
-            checked={provider.enabled}
-            onCheckedChange={onToggle}
-            disabled={isLoading}
-          />
+          <Switch checked={provider.enabled} onCheckedChange={onToggle} disabled={isLoading} />
         </div>
       </div>
 
@@ -223,7 +217,7 @@ function ProviderCard({
         {/* API Key Configuration */}
         <div className='space-y-2'>
           <div className='flex items-center gap-2'>
-            <Label htmlFor={`apikey-${provider.id}`} className='text-sm font-medium'>
+            <Label htmlFor={`apikey-${provider.id}`} className='font-medium text-sm'>
               API Key
             </Label>
             <Button
@@ -241,14 +235,18 @@ function ProviderCard({
               type={showApiKey ? 'text' : 'password'}
               value={apiKeyInput}
               onChange={(e) => handleApiKeyChange(e.target.value)}
-              placeholder={provider.apiKeyEnvVar ? `${provider.apiKeyEnvVar} or enter manually` : 'Enter API key'}
+              placeholder={
+                provider.apiKeyEnvVar
+                  ? `${provider.apiKeyEnvVar} or enter manually`
+                  : 'Enter API key'
+              }
               className='flex-1'
             />
             {provider.apiKeyEnvVar && (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button variant='outline' size='sm' className='flex-shrink-0'>
-                    <Key className='h-3 w-3 mr-1' />
+                    <Key className='mr-1 h-3 w-3' />
                     ENV
                   </Button>
                 </TooltipTrigger>
@@ -263,7 +261,7 @@ function ProviderCard({
         {/* Base URL for custom providers */}
         {(provider.type === 'custom' || provider.type === 'local') && (
           <div className='space-y-2'>
-            <Label htmlFor={`baseurl-${provider.id}`} className='text-sm font-medium'>
+            <Label htmlFor={`baseurl-${provider.id}`} className='font-medium text-sm'>
               Base URL
             </Label>
             <Input
@@ -282,7 +280,7 @@ function ProviderCard({
           </span>
           {provider.enabled && (
             <Button variant='outline' size='sm'>
-              <Settings className='h-3 w-3 mr-1' />
+              <Settings className='mr-1 h-3 w-3' />
               Configure Models
             </Button>
           )}
@@ -329,22 +327,20 @@ function AddProviderDialog({ open, onOpenChange, onAdd }: AddProviderDialogProps
     onOpenChange(false)
   }
 
-  const selectedType = PROVIDER_TYPES.find(type => type.value === formData.type)
+  const selectedType = PROVIDER_TYPES.find((type) => type.value === formData.type)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
         <Button>
-          <Plus className='h-4 w-4 mr-2' />
+          <Plus className='mr-2 h-4 w-4' />
           Add Provider
         </Button>
       </DialogTrigger>
       <DialogContent className='sm:max-w-md'>
         <DialogHeader>
           <DialogTitle>Add AI Provider</DialogTitle>
-          <DialogDescription>
-            Configure a new AI model provider
-          </DialogDescription>
+          <DialogDescription>Configure a new AI model provider</DialogDescription>
         </DialogHeader>
 
         <div className='space-y-4'>
@@ -352,7 +348,9 @@ function AddProviderDialog({ open, onOpenChange, onAdd }: AddProviderDialogProps
             <Label htmlFor='provider-type'>Provider Type</Label>
             <Select
               value={formData.type}
-              onValueChange={(value: ProviderType) => setFormData(prev => ({ ...prev, type: value }))}
+              onValueChange={(value: ProviderType) =>
+                setFormData((prev) => ({ ...prev, type: value }))
+              }
             >
               <SelectTrigger>
                 <SelectValue />
@@ -362,7 +360,7 @@ function AddProviderDialog({ open, onOpenChange, onAdd }: AddProviderDialogProps
                   <SelectItem key={type.value} value={type.value}>
                     <div className='flex flex-col'>
                       <span>{type.label}</span>
-                      <span className='text-xs text-muted-foreground'>{type.description}</span>
+                      <span className='text-muted-foreground text-xs'>{type.description}</span>
                     </div>
                   </SelectItem>
                 ))}
@@ -375,7 +373,7 @@ function AddProviderDialog({ open, onOpenChange, onAdd }: AddProviderDialogProps
             <Input
               id='provider-name'
               value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
               placeholder={selectedType?.label || 'Provider name'}
             />
           </div>
@@ -386,7 +384,7 @@ function AddProviderDialog({ open, onOpenChange, onAdd }: AddProviderDialogProps
               <Input
                 id='provider-baseurl'
                 value={formData.baseUrl}
-                onChange={(e) => setFormData(prev => ({ ...prev, baseUrl: e.target.value }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, baseUrl: e.target.value }))}
                 placeholder='https://api.example.com/v1'
               />
             </div>
@@ -398,7 +396,7 @@ function AddProviderDialog({ open, onOpenChange, onAdd }: AddProviderDialogProps
               id='provider-apikey'
               type='password'
               value={formData.apiKey}
-              onChange={(e) => setFormData(prev => ({ ...prev, apiKey: e.target.value }))}
+              onChange={(e) => setFormData((prev) => ({ ...prev, apiKey: e.target.value }))}
               placeholder='Can be set later or via environment variable'
             />
           </div>
@@ -407,7 +405,7 @@ function AddProviderDialog({ open, onOpenChange, onAdd }: AddProviderDialogProps
             <Switch
               id='provider-enabled'
               checked={formData.enabled}
-              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, enabled: checked }))}
+              onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, enabled: checked }))}
             />
             <Label htmlFor='provider-enabled'>Enable immediately</Label>
           </div>
@@ -427,7 +425,7 @@ function AddProviderDialog({ open, onOpenChange, onAdd }: AddProviderDialogProps
 }
 
 const ProviderSkeleton = () => (
-  <div className='border rounded-lg p-4 space-y-4'>
+  <div className='space-y-4 rounded-lg border p-4'>
     <div className='flex items-center justify-between'>
       <div className='flex items-center gap-3'>
         <div className='space-y-2'>

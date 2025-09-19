@@ -1,27 +1,23 @@
 import { useEffect, useState } from 'react'
 import {
   AlertTriangle,
-  Plus,
-  Server,
-  Play,
-  Square,
-  RefreshCw,
-  Trash2,
-  Settings,
-  Terminal,
-  Eye,
-  EyeOff,
   CheckCircle,
+  Clock,
+  Eye,
+  Play,
+  Plus,
+  RefreshCw,
+  Server,
+  Settings,
+  Square,
+  Terminal,
+  Trash2,
   XCircle,
-  Clock
 } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Switch } from '@/components/ui/switch'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import {
   Dialog,
   DialogContent,
@@ -30,16 +26,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useMCPServersStore } from '@/stores/settings/mcp/store'
-import { type MCPServer, type MCPTool } from '@/stores/settings/mcp/types'
+import type { MCPServer, MCPTool } from '@/stores/settings/mcp/types'
 
 const STATUS_COLORS = {
   connected: 'text-green-600 border-green-600',
@@ -114,9 +109,9 @@ export function MCPServers() {
   }
 
   const toggleServerExpanded = (serverId: string) => {
-    setExpandedServers(prev => ({
+    setExpandedServers((prev) => ({
       ...prev,
-      [serverId]: !prev[serverId]
+      [serverId]: !prev[serverId],
     }))
   }
 
@@ -137,15 +132,11 @@ export function MCPServers() {
       <div className='flex items-center justify-between'>
         <div>
           <h2 className='font-medium text-lg'>MCP Servers</h2>
-          <p className='text-muted-foreground text-sm mt-1'>
+          <p className='mt-1 text-muted-foreground text-sm'>
             Configure Model Context Protocol servers and their tools
           </p>
         </div>
-        <AddServerDialog
-          open={showAddDialog}
-          onOpenChange={setShowAddDialog}
-          onAdd={addServer}
-        />
+        <AddServerDialog open={showAddDialog} onOpenChange={setShowAddDialog} onAdd={addServer} />
       </div>
 
       <div className='space-y-4'>
@@ -156,14 +147,14 @@ export function MCPServers() {
             <ServerSkeleton />
           </>
         ) : servers.length === 0 ? (
-          <div className='text-center py-8'>
-            <Server className='h-12 w-12 text-muted-foreground mx-auto mb-4' />
-            <h3 className='text-lg font-medium'>No MCP servers configured</h3>
-            <p className='text-muted-foreground mb-4'>
+          <div className='py-8 text-center'>
+            <Server className='mx-auto mb-4 h-12 w-12 text-muted-foreground' />
+            <h3 className='font-medium text-lg'>No MCP servers configured</h3>
+            <p className='mb-4 text-muted-foreground'>
               Add MCP servers to extend capabilities with external tools
             </p>
             <Button onClick={() => setShowAddDialog(true)}>
-              <Plus className='h-4 w-4 mr-2' />
+              <Plus className='mr-2 h-4 w-4' />
               Add MCP Server
             </Button>
           </div>
@@ -217,26 +208,26 @@ function ServerCard({
   const StatusIcon = STATUS_ICONS[server.status]
 
   return (
-    <div className='border rounded-lg p-4 space-y-4'>
+    <div className='space-y-4 rounded-lg border p-4'>
       <div className='flex items-center justify-between'>
         <div className='flex items-center gap-3'>
           <div className='flex flex-col'>
             <div className='flex items-center gap-2'>
               <h3 className='font-medium'>{server.displayName}</h3>
               <Badge variant='outline' className={STATUS_COLORS[server.status]}>
-                <StatusIcon className='h-3 w-3 mr-1' />
+                <StatusIcon className='mr-1 h-3 w-3' />
                 {server.status}
               </Badge>
               {server.enabled && (
-                <Badge variant='outline' className='text-green-600 border-green-600'>
+                <Badge variant='outline' className='border-green-600 text-green-600'>
                   Enabled
                 </Badge>
               )}
             </div>
-            <div className='flex items-center gap-2 mt-1'>
-              <span className='text-xs text-muted-foreground font-mono'>{server.name}</span>
-              <span className='text-xs text-muted-foreground'>•</span>
-              <span className='text-xs text-muted-foreground'>
+            <div className='mt-1 flex items-center gap-2'>
+              <span className='font-mono text-muted-foreground text-xs'>{server.name}</span>
+              <span className='text-muted-foreground text-xs'>•</span>
+              <span className='text-muted-foreground text-xs'>
                 {server.tools.length} tool{server.tools.length !== 1 ? 's' : ''}
               </span>
             </div>
@@ -256,11 +247,7 @@ function ServerCard({
             </TooltipTrigger>
             <TooltipContent>Delete server</TooltipContent>
           </Tooltip>
-          <Switch
-            checked={server.enabled}
-            onCheckedChange={onToggle}
-            disabled={isLoading}
-          />
+          <Switch checked={server.enabled} onCheckedChange={onToggle} disabled={isLoading} />
         </div>
       </div>
 
@@ -270,30 +257,32 @@ function ServerCard({
         {/* Command and Environment */}
         <Collapsible open={isExpanded} onOpenChange={onToggleExpanded}>
           <CollapsibleTrigger asChild>
-            <Button variant='ghost' className='w-full justify-between h-auto p-0'>
+            <Button variant='ghost' className='h-auto w-full justify-between p-0'>
               <div className='flex items-center gap-2'>
                 <Settings className='h-4 w-4' />
-                <span className='text-sm font-medium'>Configuration</span>
+                <span className='font-medium text-sm'>Configuration</span>
               </div>
               <Terminal className='h-4 w-4' />
             </Button>
           </CollapsibleTrigger>
-          <CollapsibleContent className='space-y-3 mt-3'>
-            <div className='bg-muted/50 rounded-lg p-3 space-y-2'>
-              <div className='text-xs font-medium text-muted-foreground'>Command</div>
-              <div className='font-mono text-sm bg-background rounded p-2 border'>
+          <CollapsibleContent className='mt-3 space-y-3'>
+            <div className='space-y-2 rounded-lg bg-muted/50 p-3'>
+              <div className='font-medium text-muted-foreground text-xs'>Command</div>
+              <div className='rounded border bg-background p-2 font-mono text-sm'>
                 {server.command} {server.args.join(' ')}
               </div>
             </div>
 
             {Object.keys(server.env).length > 0 && (
-              <div className='bg-muted/50 rounded-lg p-3 space-y-2'>
-                <div className='text-xs font-medium text-muted-foreground'>Environment Variables</div>
+              <div className='space-y-2 rounded-lg bg-muted/50 p-3'>
+                <div className='font-medium text-muted-foreground text-xs'>
+                  Environment Variables
+                </div>
                 <div className='space-y-1'>
                   {Object.entries(server.env).map(([key, value]) => (
                     <div key={key} className='flex items-center gap-2 text-sm'>
                       <span className='font-mono text-muted-foreground'>{key}:</span>
-                      <span className='font-mono bg-background rounded px-2 py-1 border flex-1 truncate'>
+                      <span className='flex-1 truncate rounded border bg-background px-2 py-1 font-mono'>
                         {value || '<not set>'}
                       </span>
                     </div>
@@ -307,13 +296,8 @@ function ServerCard({
         {/* Connection Controls */}
         <div className='flex items-center gap-2'>
           {server.status === 'connected' ? (
-            <Button
-              variant='outline'
-              size='sm'
-              onClick={onDisconnect}
-              disabled={isLoading}
-            >
-              <Square className='h-3 w-3 mr-1' />
+            <Button variant='outline' size='sm' onClick={onDisconnect} disabled={isLoading}>
+              <Square className='mr-1 h-3 w-3' />
               Disconnect
             </Button>
           ) : (
@@ -323,28 +307,18 @@ function ServerCard({
               onClick={onConnect}
               disabled={isLoading || !server.enabled}
             >
-              <Play className='h-3 w-3 mr-1' />
+              <Play className='mr-1 h-3 w-3' />
               Connect
             </Button>
           )}
 
-          <Button
-            variant='outline'
-            size='sm'
-            onClick={onTestConnection}
-            disabled={isLoading}
-          >
+          <Button variant='outline' size='sm' onClick={onTestConnection} disabled={isLoading}>
             Test
           </Button>
 
           {server.status === 'connected' && (
-            <Button
-              variant='outline'
-              size='sm'
-              onClick={onRefreshTools}
-              disabled={isLoading}
-            >
-              <RefreshCw className='h-3 w-3 mr-1' />
+            <Button variant='outline' size='sm' onClick={onRefreshTools} disabled={isLoading}>
+              <RefreshCw className='mr-1 h-3 w-3' />
               Refresh Tools
             </Button>
           )}
@@ -354,10 +328,10 @@ function ServerCard({
         {server.tools.length > 0 && (
           <div className='space-y-2'>
             <div className='flex items-center gap-2'>
-              <Label className='text-sm font-medium'>Available Tools</Label>
+              <Label className='font-medium text-sm'>Available Tools</Label>
               <Badge variant='secondary'>{server.tools.length}</Badge>
             </div>
-            <div className='space-y-1 max-h-32 overflow-y-auto'>
+            <div className='max-h-32 space-y-1 overflow-y-auto'>
               {server.tools.map((tool) => (
                 <ToolItem key={tool.name} tool={tool} />
               ))}
@@ -367,7 +341,7 @@ function ServerCard({
 
         {/* Status Information */}
         {server.lastConnected && (
-          <div className='text-xs text-muted-foreground'>
+          <div className='text-muted-foreground text-xs'>
             Last connected: {new Date(server.lastConnected).toLocaleString()}
           </div>
         )}
@@ -375,9 +349,7 @@ function ServerCard({
         {server.lastError && (
           <Alert variant='destructive' className='mt-2'>
             <AlertTriangle className='h-4 w-4' />
-            <AlertDescription className='text-sm'>
-              {server.lastError}
-            </AlertDescription>
+            <AlertDescription className='text-sm'>{server.lastError}</AlertDescription>
           </Alert>
         )}
       </div>
@@ -391,10 +363,10 @@ interface ToolItemProps {
 
 function ToolItem({ tool }: ToolItemProps) {
   return (
-    <div className='flex items-center justify-between p-2 bg-muted/50 rounded'>
+    <div className='flex items-center justify-between rounded bg-muted/50 p-2'>
       <div className='flex-1'>
-        <div className='font-mono text-sm font-medium'>{tool.name}</div>
-        <div className='text-xs text-muted-foreground'>{tool.description}</div>
+        <div className='font-medium font-mono text-sm'>{tool.name}</div>
+        <div className='text-muted-foreground text-xs'>{tool.description}</div>
       </div>
       <Tooltip>
         <TooltipTrigger asChild>
@@ -403,7 +375,7 @@ function ToolItem({ tool }: ToolItemProps) {
           </Button>
         </TooltipTrigger>
         <TooltipContent>
-          <pre className='text-xs max-w-sm overflow-hidden'>
+          <pre className='max-w-sm overflow-hidden text-xs'>
             {JSON.stringify(tool.schema, null, 2)}
           </pre>
         </TooltipContent>
@@ -415,7 +387,9 @@ function ToolItem({ tool }: ToolItemProps) {
 interface AddServerDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onAdd: (server: Omit<MCPServer, 'id' | 'status' | 'tools' | 'createdAt' | 'updatedAt'>) => Promise<void>
+  onAdd: (
+    server: Omit<MCPServer, 'id' | 'status' | 'tools' | 'createdAt' | 'updatedAt'>
+  ) => Promise<void>
 }
 
 function AddServerDialog({ open, onOpenChange, onAdd }: AddServerDialogProps) {
@@ -435,7 +409,7 @@ function AddServerDialog({ open, onOpenChange, onAdd }: AddServerDialogProps) {
     const env: Record<string, string> = {}
 
     if (formData.env.trim()) {
-      formData.env.split('\n').forEach(line => {
+      formData.env.split('\n').forEach((line) => {
         const [key, ...valueParts] = line.split('=')
         if (key && valueParts.length > 0) {
           env[key.trim()] = valueParts.join('=').trim()
@@ -467,16 +441,14 @@ function AddServerDialog({ open, onOpenChange, onAdd }: AddServerDialogProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
         <Button>
-          <Plus className='h-4 w-4 mr-2' />
+          <Plus className='mr-2 h-4 w-4' />
           Add MCP Server
         </Button>
       </DialogTrigger>
       <DialogContent className='sm:max-w-lg'>
         <DialogHeader>
           <DialogTitle>Add MCP Server</DialogTitle>
-          <DialogDescription>
-            Configure a new Model Context Protocol server
-          </DialogDescription>
+          <DialogDescription>Configure a new Model Context Protocol server</DialogDescription>
         </DialogHeader>
 
         <div className='space-y-4'>
@@ -486,7 +458,7 @@ function AddServerDialog({ open, onOpenChange, onAdd }: AddServerDialogProps) {
               <Input
                 id='server-name'
                 value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                 placeholder='filesystem'
               />
             </div>
@@ -495,7 +467,7 @@ function AddServerDialog({ open, onOpenChange, onAdd }: AddServerDialogProps) {
               <Input
                 id='server-displayname'
                 value={formData.displayName}
-                onChange={(e) => setFormData(prev => ({ ...prev, displayName: e.target.value }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, displayName: e.target.value }))}
                 placeholder='File System MCP'
               />
             </div>
@@ -506,7 +478,7 @@ function AddServerDialog({ open, onOpenChange, onAdd }: AddServerDialogProps) {
             <Input
               id='server-command'
               value={formData.command}
-              onChange={(e) => setFormData(prev => ({ ...prev, command: e.target.value }))}
+              onChange={(e) => setFormData((prev) => ({ ...prev, command: e.target.value }))}
               placeholder='npx'
             />
           </div>
@@ -516,7 +488,7 @@ function AddServerDialog({ open, onOpenChange, onAdd }: AddServerDialogProps) {
             <Input
               id='server-args'
               value={formData.args}
-              onChange={(e) => setFormData(prev => ({ ...prev, args: e.target.value }))}
+              onChange={(e) => setFormData((prev) => ({ ...prev, args: e.target.value }))}
               placeholder='-y @modelcontextprotocol/server-filesystem'
             />
           </div>
@@ -526,11 +498,11 @@ function AddServerDialog({ open, onOpenChange, onAdd }: AddServerDialogProps) {
             <Textarea
               id='server-env'
               value={formData.env}
-              onChange={(e) => setFormData(prev => ({ ...prev, env: e.target.value }))}
+              onChange={(e) => setFormData((prev) => ({ ...prev, env: e.target.value }))}
               placeholder='VARIABLE_NAME=value&#10;ANOTHER_VAR=another_value'
               rows={3}
             />
-            <p className='text-xs text-muted-foreground'>
+            <p className='text-muted-foreground text-xs'>
               One variable per line, in the format: VARIABLE_NAME=value
             </p>
           </div>
@@ -539,7 +511,7 @@ function AddServerDialog({ open, onOpenChange, onAdd }: AddServerDialogProps) {
             <Switch
               id='server-enabled'
               checked={formData.enabled}
-              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, enabled: checked }))}
+              onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, enabled: checked }))}
             />
             <Label htmlFor='server-enabled'>Enable and connect immediately</Label>
           </div>
@@ -551,7 +523,9 @@ function AddServerDialog({ open, onOpenChange, onAdd }: AddServerDialogProps) {
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={!formData.name.trim() || !formData.displayName.trim() || !formData.command.trim()}
+            disabled={
+              !formData.name.trim() || !formData.displayName.trim() || !formData.command.trim()
+            }
           >
             Add Server
           </Button>
@@ -562,7 +536,7 @@ function AddServerDialog({ open, onOpenChange, onAdd }: AddServerDialogProps) {
 }
 
 const ServerSkeleton = () => (
-  <div className='border rounded-lg p-4 space-y-4'>
+  <div className='space-y-4 rounded-lg border p-4'>
     <div className='flex items-center justify-between'>
       <div className='flex items-center gap-3'>
         <div className='space-y-2'>

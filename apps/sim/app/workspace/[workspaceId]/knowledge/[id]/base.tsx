@@ -711,7 +711,9 @@ export function KnowledgeBase({
                         </Button>
                       </TooltipTrigger>
                       {userPermissions.canEdit !== true && (
-                        <TooltipContent>Write permission required to edit knowledge base</TooltipContent>
+                        <TooltipContent>
+                          Write permission required to edit knowledge base
+                        </TooltipContent>
                       )}
                     </Tooltip>
 

@@ -1,13 +1,12 @@
+import { nanoid } from 'nanoid'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { nanoid } from 'nanoid'
 import {
-  type ProvidersStore,
-  type Provider,
-  type Model,
-  type ModelPreset,
+  DEFAULT_PRESET_CONFIGS,
   DEFAULT_PROVIDERS,
-  DEFAULT_PRESET_CONFIGS
+  type Model,
+  type Provider,
+  type ProvidersStore,
 } from './types'
 
 const generateId = () => nanoid()
@@ -32,13 +31,13 @@ export const useProvidersStore = create<ProvidersStore>()(
             ...providerData,
             id: generateId(),
             createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
+            updatedAt: new Date().toISOString(),
           }
 
           set((state) => ({
             ...state,
             providers: [...state.providers, provider],
-            isLoading: false
+            isLoading: false,
           }))
 
           // Auto-discover models if provider is enabled
@@ -49,7 +48,7 @@ export const useProvidersStore = create<ProvidersStore>()(
           set((state) => ({
             ...state,
             error: error instanceof Error ? error.message : 'Failed to add provider',
-            isLoading: false
+            isLoading: false,
           }))
         }
       },
@@ -59,7 +58,7 @@ export const useProvidersStore = create<ProvidersStore>()(
           set((state) => ({
             ...state,
             isProviderLoading: { ...state.isProviderLoading, [id]: true },
-            error: null
+            error: null,
           }))
 
           set((state) => ({
@@ -69,7 +68,7 @@ export const useProvidersStore = create<ProvidersStore>()(
                 ? { ...provider, ...updates, updatedAt: new Date().toISOString() }
                 : provider
             ),
-            isProviderLoading: { ...state.isProviderLoading, [id]: false }
+            isProviderLoading: { ...state.isProviderLoading, [id]: false },
           }))
 
           // Refresh models if provider was enabled
@@ -80,7 +79,7 @@ export const useProvidersStore = create<ProvidersStore>()(
           set((state) => ({
             ...state,
             error: error instanceof Error ? error.message : 'Failed to update provider',
-            isProviderLoading: { ...state.isProviderLoading, [id]: false }
+            isProviderLoading: { ...state.isProviderLoading, [id]: false },
           }))
         }
       },
@@ -93,13 +92,13 @@ export const useProvidersStore = create<ProvidersStore>()(
             ...state,
             providers: state.providers.filter((provider) => provider.id !== id),
             models: state.models.filter((model) => model.providerId !== id),
-            isLoading: false
+            isLoading: false,
           }))
         } catch (error) {
           set((state) => ({
             ...state,
             error: error instanceof Error ? error.message : 'Failed to delete provider',
-            isLoading: false
+            isLoading: false,
           }))
         }
       },
@@ -118,19 +117,19 @@ export const useProvidersStore = create<ProvidersStore>()(
 
           const model: Model = {
             ...modelData,
-            id: generateId()
+            id: generateId(),
           }
 
           set((state) => ({
             ...state,
             models: [...state.models, model],
-            isLoading: false
+            isLoading: false,
           }))
         } catch (error) {
           set((state) => ({
             ...state,
             error: error instanceof Error ? error.message : 'Failed to add model',
-            isLoading: false
+            isLoading: false,
           }))
         }
       },
@@ -143,12 +142,12 @@ export const useProvidersStore = create<ProvidersStore>()(
             ...state,
             models: state.models.map((model) =>
               model.id === id ? { ...model, ...updates } : model
-            )
+            ),
           }))
         } catch (error) {
           set((state) => ({
             ...state,
-            error: error instanceof Error ? error.message : 'Failed to update model'
+            error: error instanceof Error ? error.message : 'Failed to update model',
           }))
         }
       },
@@ -157,12 +156,12 @@ export const useProvidersStore = create<ProvidersStore>()(
         try {
           set((state) => ({
             ...state,
-            models: state.models.filter((model) => model.id !== id)
+            models: state.models.filter((model) => model.id !== id),
           }))
         } catch (error) {
           set((state) => ({
             ...state,
-            error: error instanceof Error ? error.message : 'Failed to delete model'
+            error: error instanceof Error ? error.message : 'Failed to delete model',
           }))
         }
       },
@@ -176,9 +175,7 @@ export const useProvidersStore = create<ProvidersStore>()(
 
       // Preset management
       getModelsByPreset: (preset) => {
-        return get().models.filter((model) =>
-          model.enabled && model.presets.includes(preset)
-        )
+        return get().models.filter((model) => model.enabled && model.presets.includes(preset))
       },
 
       assignModelToPreset: async (modelId, preset) => {
@@ -193,7 +190,7 @@ export const useProvidersStore = create<ProvidersStore>()(
         const model = get().getModel(modelId)
         if (!model) return
 
-        const updatedPresets = model.presets.filter(p => p !== preset)
+        const updatedPresets = model.presets.filter((p) => p !== preset)
         await get().updateModel(modelId, { presets: updatedPresets })
       },
 
@@ -208,17 +205,17 @@ export const useProvidersStore = create<ProvidersStore>()(
 
           // Initialize with default providers if none exist
           if (providers.length === 0) {
-            const defaultProviders: Provider[] = DEFAULT_PROVIDERS.map(provider => ({
+            const defaultProviders: Provider[] = DEFAULT_PROVIDERS.map((provider) => ({
               ...provider,
               id: generateId(),
               createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString()
+              updatedAt: new Date().toISOString(),
             }))
 
             set((state) => ({
               ...state,
               providers: defaultProviders,
-              isLoading: false
+              isLoading: false,
             }))
           } else {
             set((state) => ({ ...state, isLoading: false }))
@@ -227,7 +224,7 @@ export const useProvidersStore = create<ProvidersStore>()(
           set((state) => ({
             ...state,
             error: error instanceof Error ? error.message : 'Failed to load providers',
-            isLoading: false
+            isLoading: false,
           }))
         }
       },
@@ -272,21 +269,24 @@ export const useProvidersStore = create<ProvidersStore>()(
 
       getEnabledModels: () => {
         return get().models.filter((model) => model.enabled)
-      }
+      },
     }),
     {
       name: 'providers-store',
       partialize: (state) => ({
         providers: state.providers,
         models: state.models,
-        presetConfigs: state.presetConfigs
-      })
+        presetConfigs: state.presetConfigs,
+      }),
     }
   )
 )
 
 // Helper function to get default models for a provider
-function getDefaultModelsForProvider(providerType: string, providerId: string): Omit<Model, 'id'>[] {
+function getDefaultModelsForProvider(
+  providerType: string,
+  providerId: string
+): Omit<Model, 'id'>[] {
   switch (providerType) {
     case 'openai':
       return [
@@ -297,7 +297,7 @@ function getDefaultModelsForProvider(providerType: string, providerId: string): 
           capabilities: ['text', 'vision', 'function-calling'],
           contextLength: 128000,
           enabled: true,
-          presets: ['vision', 'coding', 'general']
+          presets: ['vision', 'coding', 'general'],
         },
         {
           providerId,
@@ -306,7 +306,7 @@ function getDefaultModelsForProvider(providerType: string, providerId: string): 
           capabilities: ['text', 'vision', 'function-calling'],
           contextLength: 128000,
           enabled: true,
-          presets: ['general']
+          presets: ['general'],
         },
         {
           providerId,
@@ -315,7 +315,7 @@ function getDefaultModelsForProvider(providerType: string, providerId: string): 
           capabilities: ['text', 'reasoning'],
           contextLength: 128000,
           enabled: true,
-          presets: ['thinking']
+          presets: ['thinking'],
         },
         {
           providerId,
@@ -324,8 +324,8 @@ function getDefaultModelsForProvider(providerType: string, providerId: string): 
           capabilities: ['image-generation'],
           contextLength: 0,
           enabled: true,
-          presets: ['image-generation']
-        }
+          presets: ['image-generation'],
+        },
       ]
 
     case 'anthropic':
@@ -337,7 +337,7 @@ function getDefaultModelsForProvider(providerType: string, providerId: string): 
           capabilities: ['text', 'vision', 'function-calling'],
           contextLength: 200000,
           enabled: true,
-          presets: ['thinking', 'vision', 'coding', 'general']
+          presets: ['thinking', 'vision', 'coding', 'general'],
         },
         {
           providerId,
@@ -346,8 +346,8 @@ function getDefaultModelsForProvider(providerType: string, providerId: string): 
           capabilities: ['text', 'vision'],
           contextLength: 200000,
           enabled: true,
-          presets: ['general']
-        }
+          presets: ['general'],
+        },
       ]
 
     case 'google':
@@ -359,7 +359,7 @@ function getDefaultModelsForProvider(providerType: string, providerId: string): 
           capabilities: ['text', 'vision', 'function-calling'],
           contextLength: 1000000,
           enabled: true,
-          presets: ['vision', 'coding', 'general']
+          presets: ['vision', 'coding', 'general'],
         },
         {
           providerId,
@@ -368,8 +368,8 @@ function getDefaultModelsForProvider(providerType: string, providerId: string): 
           capabilities: ['text', 'vision', 'function-calling'],
           contextLength: 1000000,
           enabled: true,
-          presets: ['general']
-        }
+          presets: ['general'],
+        },
       ]
 
     default:

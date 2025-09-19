@@ -45,7 +45,7 @@ function toTableRow(entry: DirectoryEntry): TableRow {
 }
 
 export function FolderBlockContent({ blockId, isPreview, previewValues }: CustomBlockContentProps) {
-  const [folderPath, setFolderPath] = useResolvedSubBlockValue<string>(blockId, 'folderPath', {
+  const [folderPath, setFolderPath] = useResolvedSubBlockValue<string>(blockId, 'rootPath', {
     isPreview,
     previewValues,
   })

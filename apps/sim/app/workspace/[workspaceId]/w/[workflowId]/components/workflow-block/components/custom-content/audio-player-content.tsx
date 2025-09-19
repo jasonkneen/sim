@@ -10,8 +10,8 @@ import {
   Shuffle,
   SkipBack,
   SkipForward,
-  Volume2,
   Trash2,
+  Volume2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -20,6 +20,7 @@ import { Progress } from '@/components/ui/progress'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
+import { useWorkflowStore } from '@/stores/workflows/workflow/store'
 import type { CustomBlockContentProps } from './types'
 import { useResolvedSubBlockValue } from './use-resolved-subblock-value'
 
@@ -38,6 +39,8 @@ function clampIndex(index: number, length: number) {
 }
 
 export function AudioPlayerContent({ blockId, isPreview, previewValues }: CustomBlockContentProps) {
+  // Get the isWide state from the workflow store to determine view mode
+  const isWide = useWorkflowStore((state) => state.blocks[blockId]?.isWide ?? true)
   const [playlist, setPlaylist] = useResolvedSubBlockValue<PlaylistTrack[] | null>(
     blockId,
     'playlist',
@@ -54,7 +57,10 @@ export function AudioPlayerContent({ blockId, isPreview, previewValues }: Custom
       previewValues,
     }
   )
-  const [loop, setLoop] = useResolvedSubBlockValue<boolean>(blockId, 'loop', { isPreview, previewValues })
+  const [loop, setLoop] = useResolvedSubBlockValue<boolean>(blockId, 'loop', {
+    isPreview,
+    previewValues,
+  })
   const [shuffle, setShuffle] = useResolvedSubBlockValue<boolean>(blockId, 'shuffle', {
     isPreview,
     previewValues,
@@ -157,7 +163,7 @@ export function AudioPlayerContent({ blockId, isPreview, previewValues }: Custom
   useEffect(() => {
     return () => {
       // Clean up any blob URLs when tracks change or component unmounts
-      tracks.forEach(track => {
+      tracks.forEach((track) => {
         if (track.url.startsWith('blob:')) {
           URL.revokeObjectURL(track.url)
         }
@@ -289,7 +295,7 @@ export function AudioPlayerContent({ blockId, isPreview, previewValues }: Custom
       const newPlaylist = [...current]
       newPlaylist[selectedTrackIndex] = {
         ...newPlaylist[selectedTrackIndex],
-        [field]: value
+        [field]: value,
       }
       return newPlaylist
     })
@@ -370,7 +376,7 @@ export function AudioPlayerContent({ blockId, isPreview, previewValues }: Custom
   }
 
   return (
-    <div className='space-y-1'>
+    <div className='workflow-block-content space-y-1'>
       <input
         ref={fileInputRef}
         type='file'
@@ -379,10 +385,12 @@ export function AudioPlayerContent({ blockId, isPreview, previewValues }: Custom
         className='hidden'
         onChange={handleFileInputChange}
       />
+
+      {/* Now Playing Section - Always visible */}
       <div className='flex flex-col gap-2 md:flex-row md:items-start md:justify-between'>
         <div>
           <p className='text-muted-foreground text-xs uppercase tracking-wide'>Now playing</p>
-          <h3 className='font-semibold text-lg leading-tight'>
+          <h3 className={cn('font-semibold leading-tight', isWide ? 'text-lg' : 'text-base')}>
             {activeTrack?.title || 'Untitled track'}
           </h3>
           {activeTrack?.artist && (
@@ -390,11 +398,14 @@ export function AudioPlayerContent({ blockId, isPreview, previewValues }: Custom
           )}
         </div>
         <div className='flex items-center gap-2 text-muted-foreground text-xs'>
-          <span>Track {activeIndex + 1} of {tracks.length}</span>
+          <span>
+            Track {activeIndex + 1} of {tracks.length}
+          </span>
         </div>
       </div>
 
-      <div className='flex flex-col gap-2'>
+      {/* Audio Controls - Always visible */}
+      <div className={cn('flex flex-col', isWide ? 'gap-2' : 'gap-1')}>
         {/* biome-ignore lint/a11y/useMediaCaption: Captions will be attached when transcript metadata is available from upstream services. */}
         <audio
           ref={audioRef}
@@ -424,23 +435,33 @@ export function AudioPlayerContent({ blockId, isPreview, previewValues }: Custom
             variant='ghost'
             onClick={handlePrevious}
             disabled={tracks.length <= 1}
+            className={isWide ? 'h-10 w-10' : 'h-8 w-8'}
           >
-            <SkipBack className='h-5 w-5' />
+            <SkipBack className={isWide ? 'h-5 w-5' : 'h-4 w-4'} />
           </Button>
           <Button
             size='icon'
             onClick={() => setIsPlaying((prev) => !prev)}
-            className='h-12 w-12 rounded-full'
+            className={isWide ? 'h-12 w-12 rounded-full' : 'h-10 w-10 rounded-full'}
             disabled={!activeTrack?.url}
           >
-            {isPlaying ? <Pause className='h-6 w-6' /> : <Play className='h-6 w-6' />}
+            {isPlaying ? (
+              <Pause className={isWide ? 'h-6 w-6' : 'h-5 w-5'} />
+            ) : (
+              <Play className={isWide ? 'h-6 w-6' : 'h-5 w-5'} />
+            )}
           </Button>
-          <Button size='icon' variant='ghost' onClick={handleNext} disabled={tracks.length <= 1}>
-            <SkipForward className='h-5 w-5' />
+          <Button
+            size='icon'
+            variant='ghost'
+            onClick={handleNext}
+            disabled={tracks.length <= 1}
+            className={isWide ? 'h-10 w-10' : 'h-8 w-8'}
+          >
+            <SkipForward className={isWide ? 'h-5 w-5' : 'h-4 w-4'} />
           </Button>
           <div className='ml-auto flex items-center gap-2 text-muted-foreground text-xs'>
-            <Volume2 className='h-4 w-4' />
-            {/* Leaving actual volume control to browser UI; show duration summary */}
+            {isWide && <Volume2 className='h-4 w-4' />}
             <span>
               {Math.floor(currentTime / 60)
                 .toString()
@@ -464,18 +485,19 @@ export function AudioPlayerContent({ blockId, isPreview, previewValues }: Custom
         {isLoading && <p className='text-muted-foreground text-xs'>Buffering audio…</p>}
       </div>
 
-      {/* Playback Controls */}
-      <div className='grid grid-cols-2 gap-2'>
+      {/* Playback Controls - Only in full view */}
+      <div
+        className={cn(
+          'mt-2 grid grid-cols-2 gap-2 transition-all duration-150',
+          isWide ? 'max-h-32 opacity-100' : 'max-h-0 overflow-hidden opacity-0'
+        )}
+      >
         <div className='flex items-center justify-between'>
           <div className='flex items-center gap-2'>
             <Repeat className='h-4 w-4 text-muted-foreground' />
             <span className='text-sm'>Loop playlist</span>
           </div>
-          <Switch
-            checked={loop || false}
-            onCheckedChange={setLoop}
-            disabled={isPreview}
-          />
+          <Switch checked={loop || false} onCheckedChange={setLoop} disabled={isPreview} />
         </div>
 
         <div className='flex items-center justify-between'>
@@ -483,11 +505,7 @@ export function AudioPlayerContent({ blockId, isPreview, previewValues }: Custom
             <Shuffle className='h-4 w-4 text-muted-foreground' />
             <span className='text-sm'>Shuffle</span>
           </div>
-          <Switch
-            checked={shuffle || false}
-            onCheckedChange={setShuffle}
-            disabled={isPreview}
-          />
+          <Switch checked={shuffle || false} onCheckedChange={setShuffle} disabled={isPreview} />
         </div>
 
         <div className='flex items-center justify-between'>
@@ -507,15 +525,16 @@ export function AudioPlayerContent({ blockId, isPreview, previewValues }: Custom
             <Play className='h-4 w-4 text-muted-foreground' />
             <span className='text-sm'>Auto-play</span>
           </div>
-          <Switch
-            checked={autoPlay || false}
-            onCheckedChange={setAutoPlay}
-            disabled={isPreview}
-          />
+          <Switch checked={autoPlay || false} onCheckedChange={setAutoPlay} disabled={isPreview} />
         </div>
       </div>
 
-      <div className='space-y-1'>
+      <div
+        className={cn(
+          'space-y-1 transition-all duration-150',
+          isWide ? 'max-h-96 opacity-100' : 'max-h-0 overflow-hidden opacity-0'
+        )}
+      >
         <div className='flex items-center justify-between'>
           <p className='text-muted-foreground text-xs uppercase tracking-wide'>Playlist</p>
           {!isPreview && (
@@ -572,7 +591,7 @@ export function AudioPlayerContent({ blockId, isPreview, previewValues }: Custom
                     <Button
                       size='sm'
                       variant='ghost'
-                      className='opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 p-0 text-destructive hover:text-destructive'
+                      className='h-8 w-8 p-0 text-destructive opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100'
                       onClick={(e) => {
                         e.stopPropagation()
                         handleDeleteTrack(index)
@@ -592,12 +611,14 @@ export function AudioPlayerContent({ blockId, isPreview, previewValues }: Custom
           <div className='space-y-2 rounded border border-border/60 bg-background/40 p-2'>
             <div className='flex items-center gap-2'>
               <Music2 className='h-4 w-4 text-muted-foreground' />
-              <span className='text-sm font-medium'>Edit Track {selectedTrackIndex! + 1}</span>
+              <span className='font-medium text-sm'>Edit Track {selectedTrackIndex! + 1}</span>
             </div>
 
             <div className='grid grid-cols-1 gap-2 sm:grid-cols-2'>
               <div className='space-y-1'>
-                <Label htmlFor='track-title' className='text-xs'>Title</Label>
+                <Label htmlFor='track-title' className='text-xs'>
+                  Title
+                </Label>
                 <Input
                   id='track-title'
                   value={selectedTrack.title}
@@ -608,7 +629,9 @@ export function AudioPlayerContent({ blockId, isPreview, previewValues }: Custom
               </div>
 
               <div className='space-y-1'>
-                <Label htmlFor='track-artist' className='text-xs'>Artist</Label>
+                <Label htmlFor='track-artist' className='text-xs'>
+                  Artist
+                </Label>
                 <Input
                   id='track-artist'
                   value={selectedTrack.artist || ''}
@@ -619,7 +642,9 @@ export function AudioPlayerContent({ blockId, isPreview, previewValues }: Custom
               </div>
 
               <div className='space-y-1 sm:col-span-2'>
-                <Label htmlFor='track-url' className='text-xs'>URL</Label>
+                <Label htmlFor='track-url' className='text-xs'>
+                  URL
+                </Label>
                 <Input
                   id='track-url'
                   value={selectedTrack.url}

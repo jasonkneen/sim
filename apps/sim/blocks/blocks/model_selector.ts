@@ -1,6 +1,6 @@
 import { BrainIcon } from '@/components/icons'
-import { providers } from '@/providers/utils'
 import type { BlockConfig } from '@/blocks/types'
+import { providers } from '@/providers/utils'
 import type { ToolResponse } from '@/tools/types'
 
 interface ModelSelectorToolResponse extends ToolResponse {
@@ -73,7 +73,10 @@ export const ModelSelectorBlock: BlockConfig<ModelSelectorToolResponse> = {
     costEstimate: { type: 'number', description: 'Estimated cost per run' },
   },
   outputs: {
-    success: { type: 'boolean', description: 'Whether the model selector operation was successful' },
+    success: {
+      type: 'boolean',
+      description: 'Whether the model selector operation was successful',
+    },
     output: { type: 'json', description: 'The structured output containing model selector data' },
     error: { type: 'string', description: 'Error message if operation failed' },
     timing: { type: 'json', description: 'Execution timing information' },

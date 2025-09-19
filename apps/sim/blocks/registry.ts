@@ -11,6 +11,7 @@ import { ArxivBlock } from '@/blocks/blocks/arxiv'
 import { AudioPlayerBlock } from '@/blocks/blocks/audio_player'
 import { AudioRecorderBlock } from '@/blocks/blocks/audio_recorder'
 import { BrowserUseBlock } from '@/blocks/blocks/browser_use'
+import { CameraBlock } from '@/blocks/blocks/camera'
 import { ClayBlock } from '@/blocks/blocks/clay'
 import { ConditionBlock } from '@/blocks/blocks/condition'
 import { ConfluenceBlock } from '@/blocks/blocks/confluence'
@@ -44,6 +45,7 @@ import { MCPBlock } from '@/blocks/blocks/mcp'
 import { MediaViewerBlock } from '@/blocks/blocks/media_viewer'
 import { Mem0Block } from '@/blocks/blocks/mem0'
 import { MemoryBlock } from '@/blocks/blocks/memory'
+import { MicrophoneBlock } from '@/blocks/blocks/microphone'
 import { MicrosoftExcelBlock } from '@/blocks/blocks/microsoft_excel'
 import { MicrosoftTeamsBlock } from '@/blocks/blocks/microsoft_teams'
 import { MistralParseBlock } from '@/blocks/blocks/mistral_parse'
@@ -97,6 +99,7 @@ export const registry: Record<string, BlockConfig> = {
   audio_player: AudioPlayerBlock,
   audio_recorder: AudioRecorderBlock,
   browser_use: BrowserUseBlock,
+  camera: CameraBlock,
   clay: ClayBlock,
   condition: ConditionBlock,
   confluence: ConfluenceBlock,
@@ -128,6 +131,7 @@ export const registry: Record<string, BlockConfig> = {
   linkup: LinkupBlock,
   mem0: Mem0Block,
   media_viewer: MediaViewerBlock,
+  microphone: MicrophoneBlock,
   memory: MemoryBlock,
   microsoft_excel: MicrosoftExcelBlock,
   microsoft_teams: MicrosoftTeamsBlock,

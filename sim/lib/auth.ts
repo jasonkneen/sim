@@ -1,8 +1,8 @@
-import { headers } from 'next/headers'
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { nextCookies } from 'better-auth/next-js'
 import { emailOTP, genericOAuth } from 'better-auth/plugins'
+import { headers } from 'next/headers'
 import { Resend } from 'resend'
 import {
   getEmailSubject,

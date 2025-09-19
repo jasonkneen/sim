@@ -498,7 +498,7 @@ export function WorkflowBlock({ id, data, selected, style }: NodeProps<WorkflowB
         ref={blockRef}
         className={cn(
           'relative select-none shadow-md',
-          'transition-block-bg transition-ring',
+          'workflow-block workflow-block-transition transition-ring',
           'rounded-2xl border-[4px] border-border',
           'ring-1 ring-border/80 dark:ring-border/80',
           type === 'smart' ? 'min-w-[320px]' : isWide ? 'w-[480px]' : 'w-[320px]',

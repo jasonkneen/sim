@@ -31,7 +31,9 @@ export interface MCPServersState {
 
 export interface MCPServersActions {
   // Server management
-  addServer: (server: Omit<MCPServer, 'id' | 'status' | 'tools' | 'createdAt' | 'updatedAt'>) => Promise<void>
+  addServer: (
+    server: Omit<MCPServer, 'id' | 'status' | 'tools' | 'createdAt' | 'updatedAt'>
+  ) => Promise<void>
   updateServer: (id: string, updates: Partial<MCPServer>) => Promise<void>
   deleteServer: (id: string) => Promise<void>
   toggleServer: (id: string) => Promise<void>
@@ -56,14 +58,17 @@ export interface MCPServersActions {
 export type MCPServersStore = MCPServersState & MCPServersActions
 
 // Default MCP server configurations based on common servers
-export const DEFAULT_MCP_SERVERS: Omit<MCPServer, 'id' | 'status' | 'tools' | 'createdAt' | 'updatedAt'>[] = [
+export const DEFAULT_MCP_SERVERS: Omit<
+  MCPServer,
+  'id' | 'status' | 'tools' | 'createdAt' | 'updatedAt'
+>[] = [
   {
     name: 'filesystem',
     displayName: 'File System',
     command: 'npx',
     args: ['-y', '@modelcontextprotocol/server-filesystem'],
     env: {},
-    enabled: false
+    enabled: false,
   },
   {
     name: 'fetch',
@@ -71,7 +76,7 @@ export const DEFAULT_MCP_SERVERS: Omit<MCPServer, 'id' | 'status' | 'tools' | 'c
     command: 'npx',
     args: ['-y', '@modelcontextprotocol/server-fetch'],
     env: {},
-    enabled: false
+    enabled: false,
   },
   {
     name: 'memory',
@@ -79,7 +84,7 @@ export const DEFAULT_MCP_SERVERS: Omit<MCPServer, 'id' | 'status' | 'tools' | 'c
     command: 'npx',
     args: ['-y', '@modelcontextprotocol/server-memory'],
     env: {},
-    enabled: false
+    enabled: false,
   },
   {
     name: 'github',
@@ -87,9 +92,9 @@ export const DEFAULT_MCP_SERVERS: Omit<MCPServer, 'id' | 'status' | 'tools' | 'c
     command: 'npx',
     args: ['-y', '@modelcontextprotocol/server-github'],
     env: {
-      GITHUB_TOKEN: ''
+      GITHUB_TOKEN: '',
     },
-    enabled: false
+    enabled: false,
   },
   {
     name: 'puppeteer',
@@ -97,7 +102,7 @@ export const DEFAULT_MCP_SERVERS: Omit<MCPServer, 'id' | 'status' | 'tools' | 'c
     command: 'npx',
     args: ['-y', '@modelcontextprotocol/server-puppeteer'],
     env: {},
-    enabled: false
+    enabled: false,
   },
   {
     name: 'brave-search',
@@ -105,9 +110,9 @@ export const DEFAULT_MCP_SERVERS: Omit<MCPServer, 'id' | 'status' | 'tools' | 'c
     command: 'npx',
     args: ['-y', '@modelcontextprotocol/server-brave-search'],
     env: {
-      BRAVE_API_KEY: ''
+      BRAVE_API_KEY: '',
     },
-    enabled: false
+    enabled: false,
   },
   {
     name: 'postgres',
@@ -115,9 +120,9 @@ export const DEFAULT_MCP_SERVERS: Omit<MCPServer, 'id' | 'status' | 'tools' | 'c
     command: 'npx',
     args: ['-y', '@modelcontextprotocol/server-postgres'],
     env: {
-      POSTGRES_CONNECTION_STRING: ''
+      POSTGRES_CONNECTION_STRING: '',
     },
-    enabled: false
+    enabled: false,
   },
   {
     name: 'sqlite',
@@ -125,6 +130,6 @@ export const DEFAULT_MCP_SERVERS: Omit<MCPServer, 'id' | 'status' | 'tools' | 'c
     command: 'npx',
     args: ['-y', '@modelcontextprotocol/server-sqlite'],
     env: {},
-    enabled: false
-  }
+    enabled: false,
+  },
 ]

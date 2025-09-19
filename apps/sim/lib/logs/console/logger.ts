@@ -70,12 +70,15 @@ const formatObject = (obj: any): string => {
           name: obj.name,
           stack: ENV === 'development' ? obj.stack : undefined,
           // Only include additional properties if they exist
-          ...Object.getOwnPropertyNames(obj).reduce((acc, key) => {
-            if (key !== 'message' && key !== 'name' && key !== 'stack') {
-              acc[key] = (obj as any)[key]
-            }
-            return acc
-          }, {} as Record<string, any>),
+          ...Object.getOwnPropertyNames(obj).reduce(
+            (acc, key) => {
+              if (key !== 'message' && key !== 'name' && key !== 'stack') {
+                acc[key] = (obj as any)[key]
+              }
+              return acc
+            },
+            {} as Record<string, any>
+          ),
         },
         null,
         ENV === 'development' ? 2 : 0

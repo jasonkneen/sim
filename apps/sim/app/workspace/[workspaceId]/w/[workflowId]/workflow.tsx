@@ -109,10 +109,17 @@ const WorkflowContent = React.memo(() => {
     collaborativeAddBlock: addBlock,
     collaborativeAddEdge: addEdge,
     collaborativeRemoveEdge: removeEdge,
+    collaborativeRemoveBlock,
     collaborativeUpdateBlockPosition,
     collaborativeUpdateParentId: updateParentId,
     collaborativeSetSubblockValue,
   } = useCollaborativeWorkflow()
+
+  // Get undo/redo functions from the store
+  const undo = useWorkflowStore((state) => state.undo)
+  const redo = useWorkflowStore((state) => state.redo)
+  const canUndo = useWorkflowStore((state) => state.canUndo())
+  const canRedo = useWorkflowStore((state) => state.canRedo())
 
   const { resetLoaded: resetVariablesLoaded } = useVariablesStore()
 
@@ -981,16 +988,18 @@ const WorkflowContent = React.memo(() => {
         dragHandle: '.workflow-drag-handle',
         extent: block.data?.extent || undefined,
         selected: selectedNodeIds.has(block.id),
-        ...(block.type === 'smart' ? {
-          // Smart nodes are resizable with dynamic dimensions
-          resizable: true,
-          width: block.width || (block.isWide ? 450 : 350),
-          height: block.height || 300,
-        } : {
-          // Regular nodes have fixed dimensions
-          width: block.isWide ? 450 : 350,
-          height: Math.max(block.height || 100, 100),
-        }),
+        ...(block.type === 'smart'
+          ? {
+              // Smart nodes are resizable with dynamic dimensions
+              resizable: true,
+              width: block.width || (block.isWide ? 450 : 350),
+              height: block.height || 300,
+            }
+          : {
+              // Regular nodes have fixed dimensions
+              width: block.isWide ? 450 : 350,
+              height: Math.max(block.height || 100, 100),
+            }),
         data: {
           type: block.type,
           config: blockConfig,
@@ -1002,7 +1011,14 @@ const WorkflowContent = React.memo(() => {
     })
 
     return nodeArray
-  }, [blocks, activeBlockIds, pendingBlocks, isDebugModeEnabled, nestedSubflowErrors, selectedNodeIds])
+  }, [
+    blocks,
+    activeBlockIds,
+    pendingBlocks,
+    isDebugModeEnabled,
+    nestedSubflowErrors,
+    selectedNodeIds,
+  ])
 
   // Update nodes - use store version to avoid collaborative feedback loops
   const onNodesChange = useCallback(
@@ -1479,19 +1495,64 @@ const WorkflowContent = React.memo(() => {
     }
   })
 
-  // Handle keyboard shortcuts with better edge tracking
+  // Handle keyboard shortcuts for deletion and undo/redo
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if ((event.key === 'Delete' || event.key === 'Backspace') && selectedEdgeInfo) {
-        // Only delete the specific selected edge
-        removeEdge(selectedEdgeInfo.id)
-        setSelectedEdgeInfo(null)
+      // Check if user is typing in an input, textarea, or contenteditable element
+      const activeElement = document.activeElement
+      const isEditableElement =
+        activeElement instanceof HTMLInputElement ||
+        activeElement instanceof HTMLTextAreaElement ||
+        activeElement?.hasAttribute('contenteditable') ||
+        activeElement?.getAttribute('role') === 'textbox'
+
+      // Don't handle shortcuts if user is typing
+      if (isEditableElement) return
+
+      // Handle deletion
+      if (event.key === 'Delete' || event.key === 'Backspace') {
+        if (selectedEdgeInfo) {
+          // Delete selected edge
+          removeEdge(selectedEdgeInfo.id)
+          setSelectedEdgeInfo(null)
+          event.preventDefault()
+        } else if (selectedNodeIds.size > 0 && userPermissions.canEdit) {
+          // Delete selected nodes
+          selectedNodeIds.forEach((nodeId) => {
+            collaborativeRemoveBlock(nodeId)
+          })
+          setSelectedNodeIds(new Set())
+          event.preventDefault()
+        }
+      }
+
+      // Handle undo/redo
+      if (event.metaKey || event.ctrlKey) {
+        if (event.key === 'z' && !event.shiftKey && canUndo) {
+          // Undo (Cmd/Ctrl + Z)
+          event.preventDefault()
+          undo()
+        } else if (((event.key === 'z' && event.shiftKey) || event.key === 'y') && canRedo) {
+          // Redo (Cmd/Ctrl + Shift + Z or Cmd/Ctrl + Y)
+          event.preventDefault()
+          redo()
+        }
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [selectedEdgeInfo, removeEdge])
+  }, [
+    selectedEdgeInfo,
+    selectedNodeIds,
+    removeEdge,
+    collaborativeRemoveBlock,
+    userPermissions.canEdit,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+  ])
 
   // Handle sub-block value updates from custom events
   useEffect(() => {
@@ -1576,7 +1637,7 @@ const WorkflowContent = React.memo(() => {
             // Handle node selection using state
             if (e.ctrlKey || e.metaKey) {
               // Multi-select: toggle the clicked node
-              setSelectedNodeIds(prev => {
+              setSelectedNodeIds((prev) => {
                 const newSet = new Set(prev)
                 if (newSet.has(node.id)) {
                   newSet.delete(node.id)

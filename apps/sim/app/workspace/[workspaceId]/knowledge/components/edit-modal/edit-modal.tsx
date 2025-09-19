@@ -22,26 +22,27 @@ interface EditModalProps {
   onKnowledgeBaseUpdated?: (knowledgeBase: KnowledgeBaseData) => void
 }
 
-const FormSchema = z.object({
-  name: z
-    .string()
-    .min(1, 'Name is required')
-    .max(100, 'Name must be less than 100 characters')
-    .refine((value) => value.trim().length > 0, 'Name cannot be empty'),
-  description: z.string().max(500, 'Description must be less than 500 characters').optional(),
-  minChunkSize: z
-    .number()
-    .min(50, 'Min chunk size must be at least 50')
-    .max(2000, 'Min chunk size must be less than 2000'),
-  maxChunkSize: z
-    .number()
-    .min(100, 'Max chunk size must be at least 100')
-    .max(4000, 'Max chunk size must be less than 4000'),
-  overlapSize: z
-    .number()
-    .min(0, 'Overlap size must be non-negative')
-    .max(500, 'Overlap size must be less than 500'),
-})
+const FormSchema = z
+  .object({
+    name: z
+      .string()
+      .min(1, 'Name is required')
+      .max(100, 'Name must be less than 100 characters')
+      .refine((value) => value.trim().length > 0, 'Name cannot be empty'),
+    description: z.string().max(500, 'Description must be less than 500 characters').optional(),
+    minChunkSize: z
+      .number()
+      .min(50, 'Min chunk size must be at least 50')
+      .max(2000, 'Min chunk size must be less than 2000'),
+    maxChunkSize: z
+      .number()
+      .min(100, 'Max chunk size must be at least 100')
+      .max(4000, 'Max chunk size must be less than 4000'),
+    overlapSize: z
+      .number()
+      .min(0, 'Overlap size must be non-negative')
+      .max(500, 'Overlap size must be less than 500'),
+  })
   .refine((data) => data.minChunkSize < data.maxChunkSize, {
     message: 'Min chunk size must be less than max chunk size',
     path: ['minChunkSize'],
@@ -49,7 +50,12 @@ const FormSchema = z.object({
 
 type FormValues = z.infer<typeof FormSchema>
 
-export function EditModal({ open, onOpenChange, knowledgeBase, onKnowledgeBaseUpdated }: EditModalProps) {
+export function EditModal({
+  open,
+  onOpenChange,
+  knowledgeBase,
+  onKnowledgeBaseUpdated,
+}: EditModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 

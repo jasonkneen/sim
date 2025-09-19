@@ -48,21 +48,27 @@ export function TodoList({
     setNewTaskText('')
   }, [newTaskText, tasks, setStoredTasks, isPreview])
 
-  const handleToggleTask = useCallback((taskId: string) => {
-    if (isPreview) return
+  const handleToggleTask = useCallback(
+    (taskId: string) => {
+      if (isPreview) return
 
-    const updatedTasks = tasks.map(task =>
-      task.id === taskId ? { ...task, done: !task.done } : task
-    )
-    setStoredTasks(updatedTasks)
-  }, [tasks, setStoredTasks, isPreview])
+      const updatedTasks = tasks.map((task) =>
+        task.id === taskId ? { ...task, done: !task.done } : task
+      )
+      setStoredTasks(updatedTasks)
+    },
+    [tasks, setStoredTasks, isPreview]
+  )
 
-  const handleDeleteTask = useCallback((taskId: string) => {
-    if (isPreview) return
+  const handleDeleteTask = useCallback(
+    (taskId: string) => {
+      if (isPreview) return
 
-    const updatedTasks = tasks.filter(task => task.id !== taskId)
-    setStoredTasks(updatedTasks)
-  }, [tasks, setStoredTasks, isPreview])
+      const updatedTasks = tasks.filter((task) => task.id !== taskId)
+      setStoredTasks(updatedTasks)
+    },
+    [tasks, setStoredTasks, isPreview]
+  )
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -111,10 +117,7 @@ export function TodoList({
                 className='flex-shrink-0'
               />
               <span
-                className={cn(
-                  'flex-1 text-sm',
-                  task.done && 'line-through text-muted-foreground'
-                )}
+                className={cn('flex-1 text-sm', task.done && 'text-muted-foreground line-through')}
               >
                 {task.text}
               </span>

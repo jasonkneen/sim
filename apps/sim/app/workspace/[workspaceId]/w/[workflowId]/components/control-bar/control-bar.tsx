@@ -1,7 +1,19 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Bug, Copy, Layers, Play, RefreshCw, SkipForward, StepForward, Store, Trash2, WifiOff, X } from 'lucide-react'
+import {
+  Bug,
+  Copy,
+  Layers,
+  Play,
+  RefreshCw,
+  SkipForward,
+  StepForward,
+  Store,
+  Trash2,
+  WifiOff,
+  X,
+} from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
 import {
   AlertDialog,
@@ -86,7 +98,8 @@ export function ControlBar({ hasValidationErrors = false }: ControlBarProps) {
   const { setActiveTab, togglePanel, isOpen } = usePanelStore()
   const { getFolderTree, expandedFolders } = useFolderStore()
 
-  const iconButtonBase = 'inline-flex h-8 w-8 items-center justify-center rounded-2xl bg-card/90 text-card-foreground shadow-sm transition-colors'
+  const iconButtonBase =
+    'inline-flex h-8 w-8 items-center justify-center rounded-2xl bg-card/90 text-card-foreground shadow-sm transition-colors'
 
   // User permissions - use stable activeWorkspaceId from registry instead of deriving from currentWorkflow
   const userPermissions = useUserPermissionsContext()
@@ -812,13 +825,13 @@ export function ControlBar({ hasValidationErrors = false }: ControlBarProps) {
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
-            className={cn(
-              'gap-2 font-medium',
-              'bg-red-500 hover:bg-red-600',
-              'shadow-[0_0_0_0_#ef4444] hover:shadow-[0_0_0_4px_rgba(239,68,68,0.15)]',
-              'text-white transition-all duration-200',
-              'h-8 rounded-2xl px-3'
-            )}
+              className={cn(
+                'gap-2 font-medium',
+                'bg-red-500 hover:bg-red-600',
+                'shadow-[0_0_0_0_#ef4444] hover:shadow-[0_0_0_4px_rgba(239,68,68,0.15)]',
+                'text-white transition-all duration-200',
+                'h-8 rounded-2xl px-3'
+              )}
               onClick={handleCancelExecution}
             >
               <X className={cn('h-3.5 w-3.5')} />
@@ -979,7 +992,7 @@ export function ControlBar({ hasValidationErrors = false }: ControlBarProps) {
   }
 
   return (
-    <div className='fixed top-4 left-1/2 z-30 -translate-x-1/2'>
+    <div className='-translate-x-1/2 fixed top-4 left-1/2 z-30'>
       <div className='flex items-center gap-1.5 rounded-full bg-card/95 px-3 py-1.25 shadow-lg backdrop-blur-sm'>
         {renderDisconnectionNotice()}
         <ExportControls />

@@ -138,7 +138,7 @@ export const ParallelNodeComponent = memo(({ data, selected, id }: NodeProps) =>
           className={cn(
             'relative cursor-default select-none',
             'transition-block-bg transition-ring',
-            'rounded-2xl border-border border-[4px]',
+            'rounded-2xl border-[4px] border-border',
             'z-[20]',
             data?.state === 'valid',
             nestingLevel > 0 &&
