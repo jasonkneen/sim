@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { BookOpen, Code, Info, RectangleHorizontal, RectangleVertical } from 'lucide-react'
 import { useParams } from 'next/navigation'
-import { Handle, type NodeProps, Position, useUpdateNodeInternals } from 'reactflow'
+import { Handle, type NodeProps, NodeResizer, Position, useUpdateNodeInternals } from 'reactflow'
 import { Badge, Button, Card, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui'
 import { parseCronToHumanReadable } from '@/lib/schedules/utils'
 import { cn, validateName } from '@/lib/utils'
@@ -30,7 +30,7 @@ interface WorkflowBlockProps {
 }
 
 // Combine both interfaces into a single component
-export function WorkflowBlock({ id, data, selected }: NodeProps<WorkflowBlockProps>) {
+export function WorkflowBlock({ id, data, selected, style }: NodeProps<WorkflowBlockProps>) {
   const { type, config, name, isActive: dataIsActive, isPending } = data
 
   // State management
@@ -67,6 +67,20 @@ export function WorkflowBlock({ id, data, selected }: NodeProps<WorkflowBlockPro
   )
   const isWide = useWorkflowStore((state) => state.blocks[id]?.isWide ?? true)
   const blockHeight = useWorkflowStore((state) => state.blocks[id]?.height ?? 0)
+  const updateBlockHeight = useWorkflowStore((state) => state.updateBlockHeight)
+  const explicitHeight = useMemo(() => {
+    if (style?.height === undefined) return undefined
+    if (typeof style.height === 'number') return style.height
+    const parsed = Number.parseFloat(String(style.height))
+    return Number.isFinite(parsed) ? parsed : undefined
+  }, [style?.height])
+
+  useEffect(() => {
+    if (explicitHeight === undefined) return
+    if (blockHeight !== explicitHeight) {
+      updateBlockHeight(id, explicitHeight)
+    }
+  }, [blockHeight, explicitHeight, id, updateBlockHeight])
   // Get per-block webhook status by checking if webhook is configured
   const activeWorkflowId = useWorkflowRegistry((state) => state.activeWorkflowId)
 
@@ -88,8 +102,6 @@ export function WorkflowBlock({ id, data, selected }: NodeProps<WorkflowBlockPro
   } = useCollaborativeWorkflow()
 
   // Workflow store actions
-  const updateBlockHeight = useWorkflowStore((state) => state.updateBlockHeight)
-
   // Execution store
   const isActiveBlock = useExecutionStore((state) => state.activeBlockIds.has(id))
   const isActive = dataIsActive || isActiveBlock
@@ -265,7 +277,7 @@ export function WorkflowBlock({ id, data, selected }: NodeProps<WorkflowBlockPro
 
   // Add effect to observe size changes with debounced updates
   useEffect(() => {
-    if (!contentRef.current) return
+    if (!contentRef.current || style?.height !== undefined) return
 
     let rafId: number
     const debouncedUpdate = debounce((height: number) => {
@@ -299,7 +311,7 @@ export function WorkflowBlock({ id, data, selected }: NodeProps<WorkflowBlockPro
         cancelAnimationFrame(rafId)
       }
     }
-  }, [id, blockHeight, updateBlockHeight, updateNodeInternals, lastUpdate])
+  }, [id, blockHeight, updateBlockHeight, updateNodeInternals, lastUpdate, style?.height])
 
   // SubBlock layout management
   function groupSubBlocks(subBlocks: SubBlockConfig[], blockId: string) {
@@ -488,7 +500,8 @@ export function WorkflowBlock({ id, data, selected }: NodeProps<WorkflowBlockPro
           'relative select-none shadow-md',
           'transition-block-bg transition-ring',
           'rounded-2xl border-[4px] border-border',
-          isWide ? 'w-[480px]' : 'w-[320px]',
+          'ring-1 ring-border/80 dark:ring-border/80',
+          type === 'smart' ? 'min-w-[320px]' : isWide ? 'w-[480px]' : 'w-[320px]',
           !isEnabled && 'shadow-sm',
           isActive && 'animate-pulse-ring ring-2 ring-blue-500',
           isPending && 'ring-2 ring-amber-500',
@@ -499,7 +512,20 @@ export function WorkflowBlock({ id, data, selected }: NodeProps<WorkflowBlockPro
             userPermissions.canEdit &&
             'workflow-drag-handle cursor-grab [&:active]:cursor-grabbing'
         )}
+        style={{
+          ...(style ?? {}),
+          height:
+            style?.height !== undefined ? style.height : blockHeight > 0 ? blockHeight : undefined,
+        }}
       >
+        {/* Add resizer for smart nodes */}
+        {type === 'smart' && userPermissions.canEdit && (
+          <NodeResizer
+            isVisible={selected}
+            lineClassName='opacity-0'
+            handleClassName='h-3 w-3 bg-primary border border-background rounded-sm opacity-75 hover:opacity-100'
+          />
+        )}
         {/* Show debug indicator for pending blocks */}
         {isPending && (
           <div className='-top-6 -translate-x-1/2 absolute left-1/2 z-10 transform rounded-t-md bg-amber-500 px-2 py-0.5 text-white text-xs'>
@@ -887,7 +913,9 @@ export function WorkflowBlock({ id, data, selected }: NodeProps<WorkflowBlockPro
               className={cn(
                 horizontalHandles ? '!w-[10px] !h-5' : '!w-5 !h-[10px]',
                 '!bg-slate-300 dark:!bg-slate-500 !border-none',
-                horizontalHandles ? '!rounded-r-md !rounded-l-none' : '!rounded-b-md !rounded-t-none',
+                horizontalHandles
+                  ? '!rounded-r-md !rounded-l-none'
+                  : '!rounded-b-md !rounded-t-none',
                 '!z-[30]',
                 'group-hover:!shadow-[0_0_0_3px_rgba(156,163,175,0.15)]',
                 horizontalHandles
@@ -918,7 +946,9 @@ export function WorkflowBlock({ id, data, selected }: NodeProps<WorkflowBlockPro
                 className={cn(
                   horizontalHandles ? '!w-[10px] !h-5' : '!w-5 !h-[10px]',
                   '!bg-red-400 dark:!bg-red-500 !border-none',
-                  horizontalHandles ? '!rounded-r-md !rounded-l-none' : '!rounded-b-md !rounded-t-none',
+                  horizontalHandles
+                    ? '!rounded-r-md !rounded-l-none'
+                    : '!rounded-b-md !rounded-t-none',
                   '!z-[30]',
                   'group-hover:!shadow-[0_0_0_3px_rgba(248,113,113,0.15)]',
                   horizontalHandles

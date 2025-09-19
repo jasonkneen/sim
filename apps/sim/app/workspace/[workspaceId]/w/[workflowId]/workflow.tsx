@@ -981,6 +981,16 @@ const WorkflowContent = React.memo(() => {
         dragHandle: '.workflow-drag-handle',
         extent: block.data?.extent || undefined,
         selected: selectedNodeIds.has(block.id),
+        ...(block.type === 'smart' ? {
+          // Smart nodes are resizable with dynamic dimensions
+          resizable: true,
+          width: block.width || (block.isWide ? 450 : 350),
+          height: block.height || 300,
+        } : {
+          // Regular nodes have fixed dimensions
+          width: block.isWide ? 450 : 350,
+          height: Math.max(block.height || 100, 100),
+        }),
         data: {
           type: block.type,
           config: blockConfig,
@@ -988,9 +998,6 @@ const WorkflowContent = React.memo(() => {
           isActive,
           isPending,
         },
-        // Include dynamic dimensions for container resizing calculations
-        width: block.isWide ? 450 : 350, // Standard width based on isWide state
-        height: Math.max(block.height || 100, 100), // Use actual height with minimum
       })
     })
 

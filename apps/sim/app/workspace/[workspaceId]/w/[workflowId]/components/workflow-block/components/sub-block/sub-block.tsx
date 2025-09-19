@@ -28,6 +28,7 @@ import {
   Switch,
   Table,
   TimeInput,
+  TodoList,
   ToolInput,
   WebhookConfig,
 } from '@/app/workspace/[workspaceId]/w/[workflowId]/components/workflow-block/components/sub-block/components'
@@ -182,6 +183,17 @@ export function SubBlock({
             previewValue={previewValue as string | null}
             disabled={isDisabled}
             config={config}
+          />
+        )
+      case 'todo-list':
+        return (
+          <TodoList
+            blockId={blockId}
+            subBlockId={config.id}
+            value={previewValue as any}
+            isPreview={isPreview}
+            previewValue={previewValue as any}
+            disabled={isDisabled}
           />
         )
       case 'code':

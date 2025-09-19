@@ -50,6 +50,7 @@ export type SubBlockType =
   | 'file-upload' // File uploader
   | 'rich-text' // Rich text editor
   | 'playlist-editor' // Audio playlist editor
+  | 'todo-list' // Todo list with checkboxes
 
 // Component width setting
 export type SubBlockLayout = 'full' | 'half'

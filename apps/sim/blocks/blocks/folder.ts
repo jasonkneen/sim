@@ -13,9 +13,9 @@ type FolderEntry = {
 
 interface FolderToolResponse extends ToolResponse {
   output: {
-    rootPath: string
+    folderPath: string
     selectedItems: FolderEntry[]
-    includeSubdirectories?: boolean
+    includeHidden?: boolean
     filters?: string[]
   }
 }
@@ -31,26 +31,19 @@ export const FolderBlock: BlockConfig<FolderToolResponse> = {
   icon: PackageSearchIcon,
   subBlocks: [
     {
-      id: 'rootPath',
-      title: 'Root Path',
+      id: 'folderPath',
+      title: 'Folder Path',
       type: 'short-input',
       layout: 'full',
       placeholder: '/Users/me/Documents',
       required: true,
     },
     {
-      id: 'includeSubdirectories',
-      title: 'Include subdirectories',
+      id: 'includeHidden',
+      title: 'Include hidden content',
       type: 'switch',
       layout: 'half',
-    },
-    {
-      id: 'filters',
-      title: 'File Filters',
-      type: 'table',
-      layout: 'full',
-      columns: ['Pattern'],
-      description: 'Optional glob patterns (e.g., *.pdf, *.wav).',
+      hidden: true,
     },
     {
       id: 'selectedItems',
@@ -58,12 +51,13 @@ export const FolderBlock: BlockConfig<FolderToolResponse> = {
       type: 'table',
       layout: 'full',
       columns: ['Name', 'Type', 'Path'],
+      hidden: true,
     },
   ],
   tools: { access: [] },
   inputs: {
-    rootPath: { type: 'string', description: 'Base directory path' },
-    includeSubdirectories: { type: 'boolean', description: 'Whether to recurse into subdirectories' },
+    folderPath: { type: 'string', description: 'Base directory path' },
+    includeHidden: { type: 'boolean', description: 'Show dotfiles and hidden folders' },
     filters: { type: 'json', description: 'Filename filters' },
     selectedItems: { type: 'json', description: 'Selected files or folders' },
   },
@@ -72,8 +66,8 @@ export const FolderBlock: BlockConfig<FolderToolResponse> = {
     output: { type: 'json', description: 'The structured output containing folder data' },
     error: { type: 'string', description: 'Error message if operation failed' },
     timing: { type: 'json', description: 'Execution timing information' },
-    rootPath: { type: 'string', description: 'Base directory path' },
-    includeSubdirectories: { type: 'boolean', description: 'Recurse into subdirectories' },
+    folderPath: { type: 'string', description: 'Base directory path' },
+    includeHidden: { type: 'boolean', description: 'Whether hidden entries were included' },
     filters: { type: 'json', description: 'Filename filters' },
     selectedItems: { type: 'json', description: 'Selected file metadata' },
   },

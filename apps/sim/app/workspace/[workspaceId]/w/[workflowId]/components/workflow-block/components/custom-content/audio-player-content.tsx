@@ -11,10 +11,14 @@ import {
   SkipBack,
   SkipForward,
   Volume2,
+  Trash2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
 import type { CustomBlockContentProps } from './types'
 import { useResolvedSubBlockValue } from './use-resolved-subblock-value'
@@ -50,16 +54,16 @@ export function AudioPlayerContent({ blockId, isPreview, previewValues }: Custom
       previewValues,
     }
   )
-  const [loop] = useResolvedSubBlockValue<boolean>(blockId, 'loop', { isPreview, previewValues })
-  const [shuffle] = useResolvedSubBlockValue<boolean>(blockId, 'shuffle', {
+  const [loop, setLoop] = useResolvedSubBlockValue<boolean>(blockId, 'loop', { isPreview, previewValues })
+  const [shuffle, setShuffle] = useResolvedSubBlockValue<boolean>(blockId, 'shuffle', {
     isPreview,
     previewValues,
   })
-  const [radioMode] = useResolvedSubBlockValue<boolean>(blockId, 'radioMode', {
+  const [radioMode, setRadioMode] = useResolvedSubBlockValue<boolean>(blockId, 'radioMode', {
     isPreview,
     previewValues,
   })
-  const [autoPlay] = useResolvedSubBlockValue<boolean>(blockId, 'autoPlay', {
+  const [autoPlay, setAutoPlay] = useResolvedSubBlockValue<boolean>(blockId, 'autoPlay', {
     isPreview,
     previewValues,
   })
@@ -72,6 +76,7 @@ export function AudioPlayerContent({ blockId, isPreview, previewValues }: Custom
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [isDragActive, setIsDragActive] = useState(false)
+  const [selectedTrackIndex, setSelectedTrackIndex] = useState<number | null>(null)
 
   const playlistArray = useMemo(
     () => (playlist && Array.isArray(playlist) ? playlist : []),
@@ -115,28 +120,29 @@ export function AudioPlayerContent({ blockId, isPreview, previewValues }: Custom
       const list = Array.from(files)
       if (list.length === 0) return
 
-      const dataUrls = await Promise.all(
-        list.map(
-          (file) =>
-            new Promise<PlaylistTrack>((resolve, reject) => {
-              const reader = new FileReader()
-              reader.onerror = () => reject(new Error('Failed to read audio file'))
-              reader.onload = () => {
-                resolve({
-                  id: crypto.randomUUID(),
-                  title: file.name.replace(/\.[^/.]+$/, ''),
-                  url: reader.result as string,
-                  artist: undefined,
-                  coverImage: undefined,
-                  durationSeconds: undefined,
-                })
-              }
-              reader.readAsDataURL(file)
-            })
-        )
-      )
+      const tracks: PlaylistTrack[] = []
 
-      updatePlaylist((current) => [...current, ...dataUrls])
+      for (const file of list) {
+        try {
+          // Create object URL instead of data URL to avoid large payloads
+          const objectUrl = URL.createObjectURL(file)
+
+          tracks.push({
+            id: crypto.randomUUID(),
+            title: file.name.replace(/\.[^/.]+$/, ''),
+            url: objectUrl,
+            artist: undefined,
+            coverImage: undefined,
+            durationSeconds: undefined,
+          })
+        } catch (error) {
+          console.warn('Failed to process audio file:', file.name, error)
+        }
+      }
+
+      if (tracks.length > 0) {
+        updatePlaylist((current) => [...current, ...tracks])
+      }
     },
     [isPreview, updatePlaylist]
   )
@@ -146,6 +152,18 @@ export function AudioPlayerContent({ blockId, isPreview, previewValues }: Custom
     if (!tracks.length) return
     setIsPlaying(true)
   }, [autoPlay, tracks.length])
+
+  // Cleanup object URLs when component unmounts or tracks change
+  useEffect(() => {
+    return () => {
+      // Clean up any blob URLs when tracks change or component unmounts
+      tracks.forEach(track => {
+        if (track.url.startsWith('blob:')) {
+          URL.revokeObjectURL(track.url)
+        }
+      })
+    }
+  }, [tracks])
 
   useEffect(() => {
     const audio = audioRef.current
@@ -224,6 +242,60 @@ export function AudioPlayerContent({ blockId, isPreview, previewValues }: Custom
       void ingestFiles(files)
     }
   }
+
+  const handleDeleteTrack = (indexToDelete: number) => {
+    if (isPreview) return
+
+    updatePlaylist((current) => {
+      const newPlaylist = current.filter((_, index) => index !== indexToDelete)
+
+      // Clean up blob URL if it exists
+      const trackToDelete = current[indexToDelete]
+      if (trackToDelete?.url.startsWith('blob:')) {
+        URL.revokeObjectURL(trackToDelete.url)
+      }
+
+      return newPlaylist
+    })
+
+    // Adjust selected track index if needed
+    if (selectedTrackIndex === indexToDelete) {
+      setSelectedTrackIndex(null)
+    } else if (selectedTrackIndex !== null && selectedTrackIndex > indexToDelete) {
+      setSelectedTrackIndex(selectedTrackIndex - 1)
+    }
+
+    // Adjust current track index if needed
+    if (activeIndex === indexToDelete) {
+      // If deleting current track, stop playback
+      setIsPlaying(false)
+      if (indexToDelete < tracks.length - 1) {
+        // Play next track if available
+        changeTrack(indexToDelete)
+      } else if (indexToDelete > 0) {
+        // Play previous track if next is not available
+        changeTrack(indexToDelete - 1)
+      }
+    } else if (activeIndex > indexToDelete) {
+      // Adjust active index
+      setRawIndex(String(activeIndex - 1))
+    }
+  }
+
+  const handleTrackEdit = (field: keyof PlaylistTrack, value: string) => {
+    if (isPreview || selectedTrackIndex === null) return
+
+    updatePlaylist((current) => {
+      const newPlaylist = [...current]
+      newPlaylist[selectedTrackIndex] = {
+        ...newPlaylist[selectedTrackIndex],
+        [field]: value
+      }
+      return newPlaylist
+    })
+  }
+
+  const selectedTrack = selectedTrackIndex !== null ? tracks[selectedTrackIndex] : null
 
   const handleNext = () => {
     if (shuffle) {
@@ -317,22 +389,8 @@ export function AudioPlayerContent({ blockId, isPreview, previewValues }: Custom
             <p className='text-muted-foreground text-sm'>{activeTrack.artist}</p>
           )}
         </div>
-        <div className='flex flex-wrap items-center gap-2 text-muted-foreground text-xs'>
-          {loop && (
-            <span className='inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1'>
-              <Repeat className='h-3 w-3' /> Loop
-            </span>
-          )}
-          {shuffle && (
-            <span className='inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1'>
-              <Shuffle className='h-3 w-3' /> Shuffle
-            </span>
-          )}
-          {radioMode && (
-            <span className='inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1'>
-              <Radio className='h-3 w-3' /> Radio
-            </span>
-          )}
+        <div className='flex items-center gap-2 text-muted-foreground text-xs'>
+          <span>Track {activeIndex + 1} of {tracks.length}</span>
         </div>
       </div>
 
@@ -406,9 +464,68 @@ export function AudioPlayerContent({ blockId, isPreview, previewValues }: Custom
         {isLoading && <p className='text-muted-foreground text-xs'>Buffering audio…</p>}
       </div>
 
-      <div className='space-y-2'>
-        <p className='text-muted-foreground text-xs uppercase tracking-wide'>Playlist</p>
-        <ScrollArea className='max-h-40 rounded-md border border-border/60 bg-background/40'>
+      {/* Playback Controls */}
+      <div className='grid grid-cols-2 gap-4 rounded-md border border-border/60 bg-background/40 p-3'>
+        <div className='flex items-center justify-between'>
+          <div className='flex items-center gap-2'>
+            <Repeat className='h-4 w-4 text-muted-foreground' />
+            <span className='text-sm'>Loop playlist</span>
+          </div>
+          <Switch
+            checked={loop || false}
+            onCheckedChange={setLoop}
+            disabled={isPreview}
+          />
+        </div>
+
+        <div className='flex items-center justify-between'>
+          <div className='flex items-center gap-2'>
+            <Shuffle className='h-4 w-4 text-muted-foreground' />
+            <span className='text-sm'>Shuffle</span>
+          </div>
+          <Switch
+            checked={shuffle || false}
+            onCheckedChange={setShuffle}
+            disabled={isPreview}
+          />
+        </div>
+
+        <div className='flex items-center justify-between'>
+          <div className='flex items-center gap-2'>
+            <Radio className='h-4 w-4 text-muted-foreground' />
+            <span className='text-sm'>Radio mode</span>
+          </div>
+          <Switch
+            checked={radioMode || false}
+            onCheckedChange={setRadioMode}
+            disabled={isPreview}
+          />
+        </div>
+
+        <div className='flex items-center justify-between'>
+          <div className='flex items-center gap-2'>
+            <Play className='h-4 w-4 text-muted-foreground' />
+            <span className='text-sm'>Auto-play</span>
+          </div>
+          <Switch
+            checked={autoPlay || false}
+            onCheckedChange={setAutoPlay}
+            disabled={isPreview}
+          />
+        </div>
+      </div>
+
+      <div className='space-y-3'>
+        <div className='flex items-center justify-between'>
+          <p className='text-muted-foreground text-xs uppercase tracking-wide'>Playlist</p>
+          {!isPreview && (
+            <Button type='button' variant='outline' size='sm' onClick={handleFileInputClick}>
+              Add audio files
+            </Button>
+          )}
+        </div>
+
+        <ScrollArea className='h-64 rounded-md border border-border/60 bg-background/40'>
           <div
             className={cn('divide-y divide-border/60', !isPreview && 'cursor-copy')}
             onDragOver={handleDragOver}
@@ -417,40 +534,101 @@ export function AudioPlayerContent({ blockId, isPreview, previewValues }: Custom
           >
             {tracks.map((track, index) => {
               const isActive = index === activeIndex
+              const isSelected = index === selectedTrackIndex
               return (
-                <button
+                <div
                   key={track.id}
-                  type='button'
                   className={cn(
-                    'flex w-full items-center gap-3 px-3 py-2 text-left text-sm transition hover:bg-muted/70',
-                    isActive && 'bg-primary/10 text-primary'
+                    'group flex w-full items-center gap-3 px-3 py-2 text-sm transition hover:bg-muted/70',
+                    isActive && 'bg-primary/10 text-primary',
+                    isSelected && !isActive && 'bg-muted/50'
                   )}
-                  onClick={() => changeTrack(index)}
-                  disabled={!track.url}
                 >
-                  <div className='flex h-8 w-8 items-center justify-center rounded-md border border-border/60 bg-background/80'>
-                    {isActive ? (
-                      <Music2 className='h-4 w-4' />
-                    ) : (
-                      <span className='text-muted-foreground text-xs'>{index + 1}</span>
-                    )}
-                  </div>
-                  <div className='min-w-0 flex-1'>
-                    <p className='truncate font-medium'>{track.title || `Track ${index + 1}`}</p>
-                    {track.artist && (
-                      <p className='truncate text-muted-foreground text-xs'>{track.artist}</p>
-                    )}
-                  </div>
-                </button>
+                  <button
+                    type='button'
+                    className='flex min-w-0 flex-1 items-center gap-3 text-left'
+                    onClick={() => {
+                      setSelectedTrackIndex(index)
+                    }}
+                    onDoubleClick={() => changeTrack(index)}
+                    disabled={!track.url}
+                  >
+                    <div className='flex h-8 w-8 items-center justify-center rounded-md border border-border/60 bg-background/80'>
+                      {isActive ? (
+                        <Music2 className='h-4 w-4' />
+                      ) : (
+                        <span className='text-muted-foreground text-xs'>{index + 1}</span>
+                      )}
+                    </div>
+                    <div className='min-w-0 flex-1'>
+                      <p className='truncate font-medium'>{track.title || `Track ${index + 1}`}</p>
+                      {track.artist && (
+                        <p className='truncate text-muted-foreground text-xs'>{track.artist}</p>
+                      )}
+                    </div>
+                  </button>
+
+                  {!isPreview && (
+                    <Button
+                      size='sm'
+                      variant='ghost'
+                      className='opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 p-0 text-destructive hover:text-destructive'
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleDeleteTrack(index)
+                      }}
+                    >
+                      <Trash2 className='h-4 w-4' />
+                    </Button>
+                  )}
+                </div>
               )
             })}
           </div>
         </ScrollArea>
-        {!isPreview && (
-          <div className='flex justify-end'>
-            <Button type='button' variant='outline' size='sm' onClick={handleFileInputClick}>
-              Add audio files
-            </Button>
+
+        {/* Track editing form */}
+        {selectedTrack && !isPreview && (
+          <div className='space-y-3 rounded-md border border-border/60 bg-background/40 p-3'>
+            <div className='flex items-center gap-2'>
+              <Music2 className='h-4 w-4 text-muted-foreground' />
+              <span className='text-sm font-medium'>Edit Track {selectedTrackIndex! + 1}</span>
+            </div>
+
+            <div className='grid grid-cols-1 gap-3 sm:grid-cols-2'>
+              <div className='space-y-1'>
+                <Label htmlFor='track-title' className='text-xs'>Title</Label>
+                <Input
+                  id='track-title'
+                  value={selectedTrack.title}
+                  onChange={(e) => handleTrackEdit('title', e.target.value)}
+                  placeholder='Track title'
+                  className='h-8 text-sm'
+                />
+              </div>
+
+              <div className='space-y-1'>
+                <Label htmlFor='track-artist' className='text-xs'>Artist</Label>
+                <Input
+                  id='track-artist'
+                  value={selectedTrack.artist || ''}
+                  onChange={(e) => handleTrackEdit('artist', e.target.value)}
+                  placeholder='Artist name'
+                  className='h-8 text-sm'
+                />
+              </div>
+
+              <div className='space-y-1 sm:col-span-2'>
+                <Label htmlFor='track-url' className='text-xs'>URL</Label>
+                <Input
+                  id='track-url'
+                  value={selectedTrack.url}
+                  onChange={(e) => handleTrackEdit('url', e.target.value)}
+                  placeholder='https://example.com/audio.mp3'
+                  className='h-8 text-sm'
+                />
+              </div>
+            </div>
           </div>
         )}
       </div>

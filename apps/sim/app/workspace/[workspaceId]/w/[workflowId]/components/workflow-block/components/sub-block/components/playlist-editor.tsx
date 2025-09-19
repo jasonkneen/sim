@@ -1,8 +1,5 @@
 import { useMemo } from 'react'
-import { Plus, Trash } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { cn } from '@/lib/utils'
+import { Music2, Volume2 } from 'lucide-react'
 import { useSubBlockValue } from '@/app/workspace/[workspaceId]/w/[workflowId]/components/workflow-block/components/sub-block/hooks/use-sub-block-value'
 
 interface PlaylistTrackForm {
@@ -27,7 +24,7 @@ export function PlaylistEditor({
   previewValue,
   disabled = false,
 }: PlaylistEditorProps) {
-  const [storedPlaylist, setStoredPlaylist] = useSubBlockValue<PlaylistTrackForm[]>(blockId, subBlockId)
+  const [storedPlaylist] = useSubBlockValue<PlaylistTrackForm[]>(blockId, subBlockId)
   const playlist = useMemo(() => {
     const source = isPreview ? previewValue ?? [] : storedPlaylist ?? []
     return source.map((track) => ({
@@ -36,101 +33,58 @@ export function PlaylistEditor({
     }))
   }, [isPreview, previewValue, storedPlaylist])
 
-  const handleTrackChange = (index: number, field: keyof PlaylistTrackForm, value: string) => {
-    if (disabled || isPreview) return
-    const next = [...playlist]
-    next[index] = { ...next[index], [field]: value }
-    setStoredPlaylist(next)
-  }
+  const validTracks = playlist.filter(track => track.url)
 
-  const handleAddTrack = () => {
-    if (disabled || isPreview) return
-    const next = [
-      ...playlist,
-      {
-        id: crypto.randomUUID(),
-        title: '',
-        url: '',
-        artist: '',
-      },
-    ]
-    setStoredPlaylist(next)
-  }
-
-  const handleRemoveTrack = (index: number) => {
-    if (disabled || isPreview) return
-    const next = playlist.filter((_, i) => i !== index)
-    setStoredPlaylist(next)
+  if (playlist.length === 0) {
+    return (
+      <div className='flex items-center justify-center rounded-md border border-border/60 border-dashed bg-card/40 p-6'>
+        <div className='text-center'>
+          <Volume2 className='h-8 w-8 text-muted-foreground mx-auto mb-2' />
+          <p className='text-muted-foreground text-sm'>No tracks in playlist</p>
+          <p className='text-muted-foreground text-xs mt-1'>
+            Use the audio player interface to add tracks
+          </p>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className='space-y-3'>
-      <div className='space-y-2 rounded-md border border-border/60 bg-card/40 p-3'>
-        {playlist.length === 0 && (
-          <p className='text-muted-foreground text-sm'>No tracks added yet.</p>
-        )}
+    <div className='rounded-md border border-border/60 bg-card/40 p-3'>
+      <div className='flex items-center gap-2 mb-3'>
+        <Music2 className='h-4 w-4 text-muted-foreground' />
+        <span className='text-sm font-medium'>
+          {playlist.length} track{playlist.length !== 1 ? 's' : ''}
+          {validTracks.length !== playlist.length && (
+            <span className='text-muted-foreground'>
+              ({validTracks.length} with URLs)
+            </span>
+          )}
+        </span>
+      </div>
+
+      <div className='space-y-1 max-h-32 overflow-y-auto'>
         {playlist.map((track, index) => (
-          <div
-            key={track.id}
-            className='grid grid-cols-[1fr_1fr_auto] items-start gap-2 rounded-lg bg-card/60 p-2'
-          >
-            <div className='space-y-1'>
-              <label className='text-xs font-medium text-muted-foreground'>Title</label>
-              <Input
-                value={track.title}
-                onChange={(event) => handleTrackChange(index, 'title', event.target.value)}
-                placeholder='Song title'
-                disabled={disabled || isPreview}
-                className='h-8 text-sm'
-              />
+          <div key={track.id} className='flex items-center gap-2 p-2 rounded bg-background/60'>
+            <span className='text-xs text-muted-foreground w-6'>{index + 1}</span>
+            <div className='min-w-0 flex-1'>
+              <p className='text-sm font-medium truncate'>
+                {track.title || `Track ${index + 1}`}
+              </p>
+              {track.artist && (
+                <p className='text-xs text-muted-foreground truncate'>
+                  {track.artist}
+                </p>
+              )}
             </div>
-            <div className='space-y-1'>
-              <label className='text-xs font-medium text-muted-foreground'>URL</label>
-              <Input
-                value={track.url}
-                onChange={(event) => handleTrackChange(index, 'url', event.target.value)}
-                placeholder='https://…'
-                disabled={disabled || isPreview}
-                className='h-8 text-sm'
-              />
-            </div>
-            <div className='space-y-1'>
-              <label className='text-xs font-medium text-muted-foreground'>Artist</label>
-              <div className='flex items-center gap-2'>
-                <Input
-                  value={track.artist ?? ''}
-                  onChange={(event) => handleTrackChange(index, 'artist', event.target.value)}
-                  placeholder='Optional'
-                  disabled={disabled || isPreview}
-                  className='h-8 text-sm'
-                />
-                <Button
-                  type='button'
-                  variant='ghost'
-                  size='icon'
-                  onClick={() => handleRemoveTrack(index)}
-                  disabled={disabled || isPreview}
-                  className={cn('h-8 w-8 text-muted-foreground hover:text-destructive',
-                    (disabled || isPreview) && 'opacity-50')}
-                >
-                  <Trash className='h-4 w-4' />
-                </Button>
-              </div>
-            </div>
+            {!track.url && (
+              <span className='text-xs text-amber-600 bg-amber-50 px-1 rounded'>
+                No URL
+              </span>
+            )}
           </div>
         ))}
       </div>
-      <Button
-        type='button'
-        variant='outline'
-        size='sm'
-        onClick={handleAddTrack}
-        disabled={disabled || isPreview}
-        className='flex items-center gap-2'
-      >
-        <Plus className='h-4 w-4' />
-        Add Track
-      </Button>
     </div>
   )
 }

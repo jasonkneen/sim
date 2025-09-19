@@ -31,31 +31,14 @@ export const TodoBlock: BlockConfig<TodoToolResponse> = {
     {
       id: 'tasks',
       title: 'Tasks',
-      type: 'table',
+      type: 'todo-list',
       layout: 'full',
-      columns: ['Task', 'Done', 'Priority', 'Due'],
-      description: 'Enter tasks with completion state, priority, and optional due dates.',
-    },
-    {
-      id: 'autoSort',
-      title: 'Auto-sort by priority',
-      type: 'switch',
-      layout: 'half',
-      description: 'Automatically sort tasks by priority and due date.',
-    },
-    {
-      id: 'highlightActive',
-      title: 'Highlight active task',
-      type: 'switch',
-      layout: 'half',
-      description: 'Highlight the next incomplete task during execution.',
+      description: 'Add tasks and check them off when complete.',
     },
   ],
   tools: { access: [] },
   inputs: {
     tasks: { type: 'json', description: 'Task collection for the list' },
-    autoSort: { type: 'boolean', description: 'Whether to auto-sort tasks' },
-    highlightActive: { type: 'boolean', description: 'Highlight current active task' },
   },
   outputs: {
     success: { type: 'boolean', description: 'Whether the todo operation was successful' },
