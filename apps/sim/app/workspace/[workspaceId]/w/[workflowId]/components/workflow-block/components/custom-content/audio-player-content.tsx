@@ -370,7 +370,7 @@ export function AudioPlayerContent({ blockId, isPreview, previewValues }: Custom
   }
 
   return (
-    <div className='space-y-4 rounded-lg border border-border/70 bg-card/50 p-4'>
+    <div className='space-y-1'>
       <input
         ref={fileInputRef}
         type='file'
@@ -379,7 +379,7 @@ export function AudioPlayerContent({ blockId, isPreview, previewValues }: Custom
         className='hidden'
         onChange={handleFileInputChange}
       />
-      <div className='flex flex-col gap-3 md:flex-row md:items-start md:justify-between'>
+      <div className='flex flex-col gap-2 md:flex-row md:items-start md:justify-between'>
         <div>
           <p className='text-muted-foreground text-xs uppercase tracking-wide'>Now playing</p>
           <h3 className='font-semibold text-lg leading-tight'>
@@ -394,7 +394,7 @@ export function AudioPlayerContent({ blockId, isPreview, previewValues }: Custom
         </div>
       </div>
 
-      <div className='flex flex-col gap-3 rounded-md border border-border/60 bg-background/60 p-3'>
+      <div className='flex flex-col gap-2'>
         {/* biome-ignore lint/a11y/useMediaCaption: Captions will be attached when transcript metadata is available from upstream services. */}
         <audio
           ref={audioRef}
@@ -418,7 +418,7 @@ export function AudioPlayerContent({ blockId, isPreview, previewValues }: Custom
           onCanPlay={() => setIsLoading(false)}
           preload='metadata'
         />
-        <div className='flex items-center gap-3'>
+        <div className='flex items-center gap-2'>
           <Button
             size='icon'
             variant='ghost'
@@ -465,7 +465,7 @@ export function AudioPlayerContent({ blockId, isPreview, previewValues }: Custom
       </div>
 
       {/* Playback Controls */}
-      <div className='grid grid-cols-2 gap-4 rounded-md border border-border/60 bg-background/40 p-3'>
+      <div className='grid grid-cols-2 gap-2'>
         <div className='flex items-center justify-between'>
           <div className='flex items-center gap-2'>
             <Repeat className='h-4 w-4 text-muted-foreground' />
@@ -515,7 +515,7 @@ export function AudioPlayerContent({ blockId, isPreview, previewValues }: Custom
         </div>
       </div>
 
-      <div className='space-y-3'>
+      <div className='space-y-1'>
         <div className='flex items-center justify-between'>
           <p className='text-muted-foreground text-xs uppercase tracking-wide'>Playlist</p>
           {!isPreview && (
@@ -525,7 +525,7 @@ export function AudioPlayerContent({ blockId, isPreview, previewValues }: Custom
           )}
         </div>
 
-        <ScrollArea className='h-64 rounded-md border border-border/60 bg-background/40'>
+        <ScrollArea className='h-64 rounded border border-border/60'>
           <div
             className={cn('divide-y divide-border/60', !isPreview && 'cursor-copy')}
             onDragOver={handleDragOver}
@@ -539,7 +539,7 @@ export function AudioPlayerContent({ blockId, isPreview, previewValues }: Custom
                 <div
                   key={track.id}
                   className={cn(
-                    'group flex w-full items-center gap-3 px-3 py-2 text-sm transition hover:bg-muted/70',
+                    'group flex w-full items-center gap-2 px-2 py-1 text-sm transition hover:bg-muted/70',
                     isActive && 'bg-primary/10 text-primary',
                     isSelected && !isActive && 'bg-muted/50'
                   )}
@@ -589,13 +589,13 @@ export function AudioPlayerContent({ blockId, isPreview, previewValues }: Custom
 
         {/* Track editing form */}
         {selectedTrack && !isPreview && (
-          <div className='space-y-3 rounded-md border border-border/60 bg-background/40 p-3'>
+          <div className='space-y-2 rounded border border-border/60 bg-background/40 p-2'>
             <div className='flex items-center gap-2'>
               <Music2 className='h-4 w-4 text-muted-foreground' />
               <span className='text-sm font-medium'>Edit Track {selectedTrackIndex! + 1}</span>
             </div>
 
-            <div className='grid grid-cols-1 gap-3 sm:grid-cols-2'>
+            <div className='grid grid-cols-1 gap-2 sm:grid-cols-2'>
               <div className='space-y-1'>
                 <Label htmlFor='track-title' className='text-xs'>Title</Label>
                 <Input
